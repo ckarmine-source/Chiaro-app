@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1A56DB" />
+  <title>Chiaro — Documenti e dubbi in parole semplici</title>
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --primary: #1A56DB;
+      --primary-dark: #1E40AF;
+      --primary-soft: #EFF6FF;
+      --text: #0F172A;
+      --muted: #64748B;
+      --border: #E2E8F0;
+      --ok: #10B981;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 84px;
+    }
+    .app-wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
+    .brand { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
+    h1 { font-size: 25px; line-height: 1.2; margin: 0 0 8px; }
+    .subtitle { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0 0 20px; }
+
+    .card-primary {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 16px; padding: 18px;
+      width: 100%; text-align: left; cursor: pointer; margin-bottom: 12px;
+      box-shadow: 0 6px 18px rgba(26, 86, 219, 0.18);
+    }
+    .card-secondary {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+      width: 100%; text-align: left; cursor: pointer; margin-bottom: 22px;
+    }
+    .icon-box {
+      width: 46px; height: 46px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .icon-light { background: rgba(255,255,255,0.2); }
+    .icon-blue { background: var(--primary-soft); color: var(--primary); }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+    .card-sub { font-size: 13px; opacity: 0.9; line-height: 1.4; }
+    .card-secondary .card-sub { color: var(--muted); opacity: 1; }
+
+    .section-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .section-title { font-size: 16px; font-weight: 700; }
+    .link-btn {
+      background: none; border: none; color: var(--primary);
+      font-weight: 700; font-size: 13px; cursor: pointer; padding: 4px;
+    }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; margin-bottom: 12px;
+    }
+    .back-btn {
+      background: none; border: none; color: var(--text);
+      font-size: 15px; font-weight: 700; padding: 0 0 14px;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .upload-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .upload-btn {
+      flex: 1; background: var(--primary-soft); color: var(--primary-dark);
+      border: 1px solid #BFDBFE; border-radius: 12px; padding: 13px 10px;
+      font-weight: 700; font-size: 14px; cursor: pointer; text-align: center;
+    }
+    textarea {
+      width: 100%; min-height: 125px; border: 1px solid #CBD5E1;
+      border-radius: 14px; padding: 14px; font-size: 15px;
+      font-family: inherit; color: var(--text); background: var(--card);
+      resize: vertical; margin-bottom: 14px;
+    }
+    .btn-main {
+      width: 100%; background: var(--primary); color: #fff;
+      border: none; border-radius: 14px; padding: 15px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .btn-main:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .preview-wrap { margin-bottom: 14px; text-align: center; }
+    .preview-wrap img {
+      max-width: 100%; max-height: 210px; border-radius: 12px;
+      border: 1px solid var(--border); display: block; margin: 0 auto 8px;
+    }
+    .remove-btn {
+      background: none; border: none; color: #DC2626;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .badge {
+      font-size: 12px; font-weight: 700; padding: 4px 10px;
+      border-radius: 8px; background: #E0E7FF; color: #1E40AF;
+    }
+    .urg-Alta { background: #FEE2E2; color: #B91C1C; }
+    .urg-Media { background: #FEF3C7; color: #B45309; }
+    .urg-Bassa { background: #DCFCE7; color: #15803D; }
+    .urg-Nessuna { background: #F1F5F9; color: #475569; }
+
+    .blk-label {
+      font-size: 11px; font-weight: 800; letter-spacing: 0.6px;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .blk-text { font-size: 15px; line-height: 1.5; margin: 0; }
+    .step-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      margin-top: 10px; cursor: pointer; font-size: 15px; line-height: 1.45;
+    }
+    .step-item input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ok); }
+    .done { text-decoration: line-through; color: #94A3B8; }
+
+    .action-box {
+      background: var(--primary-soft); border: 1px solid #BFDBFE;
+      border-radius: 14px; padding: 16px; margin-bottom: 14px;
+    }
+    .action-title { font-size: 14px; font-weight: 800; color: var(--primary-dark); margin-bottom: 8px; }
+    .action-msg {
+      background: #fff; border-radius: 10px; padding: 12px;
+      font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+      color: #1E293B; margin-bottom: 10px; border: 1px solid #DBEAFE;
+    }
+    .btn-outline {
+      flex: 1; background: #fff; color: var(--primary);
+      border: 1.5px solid var(--primary); border-radius: 12px;
+      padding: 13px 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .btn-solid-sm {
+      flex: 1; background: var(--primary); color: #fff;
+      border: none; border-radius: 12px;
+      padding: 13px 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .row-actions { display: flex; gap: 10px; margin-bottom: 14px; }
+
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; }
+    .chip {
+      border: 1px solid #CBD5E1; background: #fff; color: #475569;
+      padding: 7px 13px; border-radius: 20px; font-size: 13px;
+      font-weight: 600; white-space: nowrap; cursor: pointer;
+    }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .list-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    }
+    .disclaimer {
+      font-size: 12px; color: var(--muted); text-align: center;
+      line-height: 1.45; margin-top: 10px;
+    }
+    .toast {
+      position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+      background: #0F172A; color: #fff; padding: 10px 16px;
+      border-radius: 12px; font-size: 13px; font-weight: 600;
+      z-index: 50; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around; padding: 8px 0;
+      z-index: 40;
+    }
+    .nav-btn {
+      background: none; border: none; color: var(--muted);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 4px 14px;
+    }
+    .nav-btn.active { color: var(--primary); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app-wrap">
+    <!-- VISTA HOME -->
+    <section id="view-home">
+      <div class="brand">Chiaro</div>
+      <h1>Ciao, cosa vuoi chiarire oggi?</h1>
+      <p class="subtitle">Traduci bollette, lettere, regole e dubbi quotidiani in passi semplici e concreti.</p>
+
+      <button class="card-primary" onclick="apriInput('documento')">
+        <div class="icon-box icon-light">📄</div>
+        <div style="flex:1">
+          <div class="card-title">Ho ricevuto un documento</div>
+          <div class="card-sub">Fotografa o carica bollette, avvisi, contratti o lettere</div>
+        </div>
+        <div>›</div>
+      </button>
+
+      <button class="card-secondary" onclick="apriInput('dubbio')">
+        <div class="icon-box icon-blue">💬</div>
+        <div style="flex:1">
+          <div class="card-title">Chiedi un dubbio quotidiano</div>
+          <div class="card-sub">Garanzie, costi, sigle, reclami o "da dove inizio?"</div>
+        </div>
+        <div style="color:var(--muted)">›</div>
+      </button>
+
+      <div class="section-hdr">
+        <span class="section-title">Prossime scadenze</span>
+        <button class="link-btn" onclick="cambiaTab('scadenze')">Vedi tutte</button>
+      </div>
+      <div id="home-scadenze"></div>
+    </section>
+
+    <!-- VISTA INPUT -->
+    <section id="view-input" class="hidden">
+      <button class="back-btn" onclick="tornaHome()">← Indietro</button>
+      <h1 id="input-title">Analizza un documento</h1>
+      <p class="subtitle" id="input-sub">Scatta una foto chiara al foglio oppure incolla il testo qui sotto.</p>
+
+      <div id="foto-controls" class="upload-row">
+        <label class="upload-btn">
+          📷 Scatta foto
+          <input type="file" accept="image/*" capture="environment" hidden onchange="gestisciFile(event)" />
+        </label>
+        <label class="upload-btn">
+          🖼️ Galleria
+          <input type="file" accept="image/*" hidden onchange="gestisciFile(event)" />
+        </label>
+      </div>
+
+      <div id="preview-wrap" class="preview-wrap hidden">
+        <img id="preview-img" alt="Anteprima documento" />
+        <button class="remove-btn" onclick="rimuoviFoto()">Rimuovi foto</button>
+      </div>
+
+      <textarea id="input-testo" placeholder="Scrivi qui il tuo dubbio oppure incolla il testo della lettera o bolletta..."></textarea>
+      <button id="btn-analizza" class="btn-main" onclick="inviaAnalisi()">Spiegamelo in parole semplici</button>
+    </section>
+
+    <!-- VISTA RISULTATO -->
+    <section id="view-risultato" class="hidden">
+      <button class="back-btn" onclick="tornaHome()">← Torna alla Home</button>
+      <div class="badges">
+        <span id="res-cat" class="badge">Categoria</span>
+        <span id="res-urg" class="badge urg-Nessuna">Urgenza</span>
+      </div>
+      <h1 id="res-titolo">Titolo</h1>
+
+      <div class="panel">
+        <div class="blk-label">1. IN PAROLE SEMPLICI</div>
+        <p id="res-semplice" class="blk-text"></p>
+      </div>
+
+      <div class="panel">
+        <div class="blk-label">2. COSA SIGNIFICA PER TE</div>
+        <p id="res-impatto" class="blk-text"></p>
+      </div>
+
+      <div class="panel">
+        <div class="blk-label">3. SCADENZA E URGENZA</div>
+        <p id="res-scadenza" class="blk-text" style="font-weight:700;"></p>
+      </div>
+
+      <div class="panel">
+        <div class="blk-label">4. PROSSIMO PASSO</div>
+        <div id="res-passi"></div>
+      </div>
+
+      <div id="res-azione-box" class="action-box hidden">
+        <div id="res-azione-titolo" class="action-title">Azione pronta</div>
+        <div id="res-azione-testo" class="action-msg"></div>
+        <button class="btn-outline" style="width:100%" onclick="copiaAzione()">📋 Copia testo pronto</button>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn-outline" onclick="salvaScheda(true)">⏰ Metti promemoria</button>
+        <button class="btn-solid-sm" onclick="salvaScheda(false)">📁 Salva in Archivio</button>
+      </div>
+
+      <p class="disclaimer">
+        Chiaro offre supporto informativo e organizzativo: per casi legali, fiscali o sanitari rivolgiti sempre a un professionista o all'ente competente.
+      </p>
+    </section>
+
+    <!-- VISTA SCADENZE -->
+    <section id="view-scadenze" class="hidden">
+      <h1>Da fare & Scadenze</h1>
+      <p class="subtitle">Spunta ciò che hai completato e tieni d'occhio le date importanti.</p>
+      <div id="lista-scadenze"></div>
+    </section>
+
+    <!-- VISTA ARCHIVIO -->
+    <section id="view-archivio" class="hidden">
+      <h1>Archivio</h1>
+      <p class="subtitle">Tutti i documenti e i chiarimenti salvati sul tuo dispositivo.</p>
+      <div class="chips" id="archivio-chips"></div>
+      <div id="lista-archivio"></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <nav class="bottom-nav">
+    <button id="nav-home" class="nav-btn active" onclick="cambiaTab('home')">
+      <span>🏠</span><span>Home</span>
+    </button>
+    <button id="nav-scadenze" class="nav-btn" onclick="cambiaTab('scadenze')">
+      <span>📅</span><span>Scadenze</span>
+    </button>
+    <button id="nav-archivio" class="nav-btn" onclick="cambiaTab('archivio')">
+      <span>🗂️</span><span>Archivio</span>
+    </button>
+  </nav>
+
+  <script>
+    const STORAGE_KEY = "chiaro_schede_v1";
+    const API_ENDPOINT = "/.netlify/functions/analizza-chiaro";
+
+    let schede = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    let schedaAttuale = null;
+    let fotoBase64 = null;
+    let fotoMime = "image/jpeg";
+    let categoriaFiltro = "Tutti";
+
+    function mostraToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.style.display = "block";
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { t.style.display = "none"; }, 2400);
+    }
+
+    function salvaStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(schede));
+    }
+
+    function nascondiTutte() {
+      ["view-home", "view-input", "view-risultato", "view-scadenze", "view-archivio"]
+        .forEach(id => document.getElementById(id).classList.add("hidden"));
+    }
+
+    function cambiaTab(tab) {
+      ["home", "scadenze", "archivio"].forEach(t => {
+        document.getElementById("nav-" + t).classList.toggle("active", t === tab);
+      });
+      nascondiTutte();
+      if (tab === "home") {
+        renderHomeScadenze();
+        document.getElementById("view-home").classList.remove("hidden");
+      } else if (tab === "scadenze") {
+        renderScadenze();
+        document.getElementById("view-scadenze").classList.remove("hidden");
+      } else if (tab === "archivio") {
+        renderArchivio();
+        document.getElementById("view-archivio").classList.remove("hidden");
+      }
+    }
+
+    function tornaHome() {
+      cambiaTab("home");
+    }
+
+    function apriInput(modalita) {
+      nascondiTutte();
+      document.getElementById("view-input").classList.remove("hidden");
+      document.getElementById("input-testo").value = "";
+      rimuoviFoto();
+      const isDoc = modalita === "documento";
+      document.getElementById("foto-controls").classList.toggle("hidden", !isDoc);
+      document.getElementById("input-title").textContent = isDoc
+        ? "Analizza un documento"
+        : "Chiedi in parole semplici";
+      document.getElementById("input-sub").textContent = isDoc
+        ? "Scatta una foto al documento o incolla il testo qui sotto."
+        : "Scrivi cosa non ti è chiaro o come vuoi muoverti oggi.";
+    }
+
+    function gestisciFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      fotoMime = file.type || "image/jpeg";
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        fotoBase64 = result.split(",")[1] || null;
+        const img = document.getElementById("preview-img");
+        img.src = result;
+        document.getElementById("preview-wrap").classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function rimuoviFoto() {
+      fotoBase64 = null;
+      document.getElementById("preview-img").src = "";
+      document.getElementById("preview-wrap").classList.add("hidden");
+    }
+
+    async function inviaAnalisi() {
+      const testo = document.getElementById("input-testo").value.trim();
+      if (!testo && !fotoBase64) {
+        mostraToast("Inserisci del testo o carica una foto");
+        return;
+      }
+
+      const btn = document.getElementById("btn-analizza");
+      btn.disabled = true;
+      btn.textContent = "Sto leggendo e semplificando...";
+
+      try {
+        const res = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            testo,
+            immagineBase64: fotoBase64,
+            mimeType: fotoMime
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || "Errore dal server");
+        }
+
+        schedaAttuale = {
+          id: String(Date.now()),
+          dataCreazione: new Date().toLocaleDateString("it-IT"),
+          inScadenze: false,
+          fatto: false,
+          completati: [],
+          ...data
+        };
+
+        mostraRisultato(schedaAttuale);
+      } catch (err) {
+        mostraToast("Controlla la chiave GEMINI_API_KEY su Netlify e riprova");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Spiegamelo in parole semplici";
+      }
+    }
+
+    function mostraRisultato(s) {
+      nascondiTutte();
+      document.getElementById("view-risultato").classList.remove("hidden");
+
+      document.getElementById("res-cat").textContent = s.categoria || "Generale";
+      const urgEl = document.getElementById("res-urg");
+      const urgVal = s.urgenza || "Nessuna";
+      urgEl.textContent = "Urgenza: " + urgVal;
+      urgEl.className = "badge urg-" + urgVal;
+
+      document.getElementById("res-titolo").textContent = s.titolo || "Analisi completata";
+      document.getElementById("res-semplice").textContent = s.in_parole_semplici || "";
+      document.getElementById("res-impatto").textContent = s.cosa_significa_per_te || "";
+      document.getElementById("res-scadenza").textContent = s.scadenza_testo || "Nessuna scadenza fissa";
+
+      const passiEl = document.getElementById("res-passi");
+      passiEl.innerHTML = "";
+      const passi = Array.isArray(s.prossimo_passo) ? s.prossimo_passo : [];
+      const doneList = Array.isArray(s.completati) ? s.completati : [];
+
+      passi.forEach((passo, idx) => {
+        const checked = doneList.includes(idx);
+        const label = document.createElement("label");
+        label.className = "step-item";
+        label.innerHTML = `
+          <input type="checkbox" ${checked ? "checked" : ""} />
+          <span class="${checked ? "done" : ""}">${passo}</span>
+        `;
+        label.querySelector("input").addEventListener("change", (e) => {
+          const isDone = e.target.checked;
+          if (!Array.isArray(schedaAttuale.completati)) schedaAttuale.completati = [];
+          if (isDone && !schedaAttuale.completati.includes(idx)) {
+            schedaAttuale.completati.push(idx);
+          } else if (!isDone) {
+            schedaAttuale.completati = schedaAttuale.completati.filter(x => x !== idx);
+          }
+          label.querySelector("span").classList.toggle("done", isDone);
+          aggiornaSeSalvata(schedaAttuale);
+        });
+        passiEl.appendChild(label);
+      });
+
+      const azBox = document.getElementById("res-azione-box");
+      if (s.azione_pronta && s.azione_pronta.testo_copiabile) {
+        azBox.classList.remove("hidden");
+        document.getElementById("res-azione-titolo").textContent =
+          "Azione pronta: " + (s.azione_pronta.titolo_azione || "Messaggio");
+        document.getElementById("res-azione-testo").textContent = s.azione_pronta.testo_copiabile;
+      } else {
+        azBox.classList.add("hidden");
+      }
+    }
+
+    function aggiornaSeSalvata(s) {
+      const idx = schede.findIndex(item => item.id === s.id);
+      if (idx !== -1) {
+        schede[idx] = s;
+        salvaStorage();
+      }
+    }
+
+    function salvaScheda(conScadenza) {
+      if (!schedaAttuale) return;
+     
