@@ -35,7 +35,7 @@
     <button class="btn-card btn-primary" id="goDoc">📄 Ho ricevuto un documento<br><span style="font-weight:400;font-size:13px">Foto o testo del documento</span></button>
     <button class="btn-card" id="goDubbio">💬 Chiedi un dubbio quotidiano<br><span style="font-weight:400;font-size:13px;color:#64748b">Regole, costi, reclami o primi passi</span></button>
     <div class="lbl" style="margin-top:16px">PROSSIME SCADENZE</div>
-    <div id="homeScad" class="box" style="color:#64748b;font-size:14px">Nessuna scadenza salvata.</div>
+    <div id="homeScad" class="box" style="color:#64748b;font-size:14px">Nessuna scadenza attiva.</div>
   </div>
 
   <div id="v-input" class="hidden">
@@ -62,7 +62,7 @@
       <div id="rAzTxt" style="white-space:pre-wrap;font-size:14px;margin-bottom:8px"></div>
       <button class="btn btn-sec" id="btnCopy">Copia testo</button>
     </div>
-    <button class="btn" id="btnSave">Salva in Archivio e Scadenze</button>
+    <button class="btn" id="btnSave">Salva in Archivio</button>
   </div>
 
   <div id="v-scad" class="hidden">
@@ -94,10 +94,15 @@
   const openView=(id)=>{clearErr();views.forEach(v=>document.getElementById(v).classList.toggle("hidden",v!==id))};
   const setTab=(btnId)=>{["nHome","nScad","nArc"].forEach(b=>document.getElementById(b).classList.toggle("on",b===btnId))};
 
+  const haScadenzaReale=(x)=>{
+    const s=(x&&x.scadenza_testo?String(x.scadenza_testo):"").trim().toLowerCase();
+    return s && !s.includes("nessuna scadenza") && s !== "—" && s !== "-";
+  };
+
   const renderHome=()=>{
-    const sc=items.filter(x=>!x.fatto);
+    const sc=items.filter(x=>!x.fatto && haScadenzaReale(x));
     document.getElementById("homeScad").innerHTML=sc.length
-      ? sc.slice(0,3).map(x=>"<b>"+x.titolo+"</b> · "+(x.scadenza_testo||"")).join("<br>")
+      ? sc.slice(0,3).map(x=>"<b>"+x.titolo+"</b> · "+x.scadenza_testo).join("<br>")
       : "Nessuna scadenza attiva.";
   };
 
@@ -125,13 +130,20 @@
     if(!testo&&!b64){showErr("Scrivi un dubbio o scegli una foto.");return}
     const btn=document.getElementById("btnRun"); btn.disabled=true; btn.textContent="Sto elaborando..."; clearErr();
     try{
-      const r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({testo,immagineBase64:b64,mimeType:mime})});
-      const d=await r.json();
+      const payload=JSON.stringify({testo,immagineBase64:b64,mimeType:mime});
+      let r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+      let d=await r.json();
+      if(!r.ok && (r.status===503 || r.status===429 || /high demand|overloaded/i.test(d.error||""))){
+        btn.textContent="Riprovo tra un attimo...";
+        await new Promise(res=>setTimeout(res,900));
+        r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+        d=await r.json();
+      }
       if(!r.ok||d.error)throw new Error(d.error||"Errore server");
       cur={id:String(Date.now()),fatto:false,...d};
       renderRes(cur);
     }catch(err){
-      showErr("Errore analisi: "+err.message+". Verifica GEMINI_API_KEY su Netlify e riprova.");
+      showErr("Errore analisi: "+err.message+". Riprova tra qualche secondo.");
     }finally{
       btn.disabled=false; btn.textContent="Spiegamelo in parole semplici";
     }
@@ -160,16 +172,20 @@
     if(!cur)return;
     items.unshift(cur);
     localStorage.setItem(KEY,JSON.stringify(items));
-    alert("Salvato!");
+    renderHome();
+    alert("Salvato in Archivio!");
   };
 
   document.getElementById("nHome").onclick=()=>{setTab("nHome");renderHome();openView("v-home")};
   document.getElementById("nScad").onclick=()=>{
     setTab("nScad"); openView("v-scad");
+    const scadenze=items.map((x,i)=>({x,i})).filter(({x})=>haScadenzaReale(x));
     const el=document.getElementById("listScad");
-    el.innerHTML=items.length?items.map((x,i)=>"<div class='box'><label><input type='checkbox' "+(x.fatto?"checked":"")+" data-i='"+i+"'> <b>"+x.titolo+"</b></label><div style='font-size:13px;color:#64748b'>"+(x.scadenza_testo||"")+"</div></div>").join(""):"<div class='box'>Nessuna scadenza.</div>";
+    el.innerHTML=scadenze.length
+      ? scadenze.map(({x,i})=>"<div class='box'><label><input type='checkbox' "+(x.fatto?"checked":"")+" data-i='"+i+"'> <b>"+x.titolo+"</b></label><div style='font-size:13px;color:#64748b'>"+x.scadenza_testo+"</div></div>").join("")
+      : "<div class='box'>Nessuna scadenza reale salvata.</div>";
     el.querySelectorAll("input[type=checkbox]").forEach(cb=>{
-      cb.onchange=()=>{items[cb.dataset.i].fatto=cb.checked;localStorage.setItem(KEY,JSON.stringify(items))};
+      cb.onchange=()=>{items[cb.dataset.i].fatto=cb.checked;localStorage.setItem(KEY,JSON.stringify(items));renderHome()};
     });
   };
   document.getElementById("nArc").onclick=()=>{
@@ -185,4 +201,5 @@
 })();
 </script>
 </body>
-</html>
+  </html>
+  
