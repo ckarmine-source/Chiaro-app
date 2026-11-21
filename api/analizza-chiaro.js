@@ -69,7 +69,7 @@ export default async function handler(req, res) {
           response_mime_type: "application/json",
           temperature: 0.2,
           maxOutputTokens: 700,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: { thinkingLevel: "LOW" },
         },
       }),
     });
