@@ -31,6 +31,14 @@ exports.handler = async (event) => {
     const { testo, immagineBase64, mimeType } = JSON.parse(event.body || "{}");
     const apiKey = process.env.GEMINI_API_KEY;
 
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: "GEMINI_API_KEY mancante su Netlify" }),
+      };
+    }
+
     const parts = [];
     if (immagineBase64) {
       parts.push({
@@ -60,6 +68,14 @@ exports.handler = async (event) => {
     );
 
     const data = await response.json();
+    if (!response.ok) {
+      return {
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify({ error: data.error?.message || "Errore API Gemini" }),
+      };
+    }
+
     const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
     return {
@@ -75,4 +91,3 @@ exports.handler = async (event) => {
     };
   }
 };
-      
