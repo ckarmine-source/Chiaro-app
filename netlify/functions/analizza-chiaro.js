@@ -15,21 +15,6 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
 }
 Se non serve scrivere a nessuno, imposta "azione_pronta": null.`;
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function chiamaGemini(apiKey, model, payload) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }
-  );
-  const data = await res.json();
-  return { ok: res.ok, status: res.status, data };
-}
-
 exports.handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -43,9 +28,12 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { testo, immagineBase64, mimeType } = JSON.parse(event.body || "{}");
-    const apiKey = process.env.GEMINI_API_KEY;
+    const body = event.body ? JSON.parse(event.body) : {};
+    const testo = body.testo || "";
+    const immagineBase64 = body.immagineBase64 || null;
+    const mimeType = body.mimeType || "image/jpeg";
 
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return {
         statusCode: 500,
@@ -58,60 +46,72 @@ exports.handler = async (event) => {
     if (immagineBase64) {
       parts.push({
         inline_data: {
-          mime_type: mimeType || "image/jpeg",
+          mime_type: mimeType,
           data: immagineBase64,
         },
       });
     }
     parts.push({
-      text: testo?.trim()
-        ? `Analizza questa richiesta o documento del cittadino:\n${testo}`
+      text: testo.trim()
+        ? "Analizza questa richiesta o documento del cittadino:\n" + testo.trim()
         : "Analizza questo documento fotografato e spiegamelo in parole semplici.",
     });
 
-    const payload = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: "user", parts }],
-      generationConfig: { response_mime_type: "application/json" },
-    };
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" +
+      encodeURIComponent(apiKey);
 
-    const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
-    let lastError = "Errore API Gemini";
-    let lastStatus = 500;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: { response_mime_type: "application/json" },
+      }),
+    });
 
-    for (const model of models) {
-      for (let tentativo = 1; tentativo <= 2; tentativo++) {
-        const result = await chiamaGemini(apiKey, model, payload);
-        if (result.ok) {
-          const rawJson = result.data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-          return {
-            statusCode: 200,
-            headers,
-            body: rawJson,
-          };
-        }
-
-        lastStatus = result.status;
-        lastError = result.data.error?.message || "Errore API Gemini";
-
-        if (result.status === 503 || result.status === 429) {
-          await sleep(800 * tentativo);
-          continue;
-        }
-        break;
-      }
+    const textResponse = await response.text();
+    let data;
+    try {
+      data = JSON.parse(textResponse);
+    } catch (e) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({ error: "Risposta non JSON da Gemini: " + textResponse.slice(0, 180) }),
+      };
     }
 
+    if (!response.ok) {
+      const msg = (data && data.error && data.error.message) || ("HTTP " + response.status);
+      return {
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify({ error: msg }),
+      };
+    }
+
+    const rawJson =
+      (data &&
+        data.candidates &&
+        data.candidates[0] &&
+        data.candidates[0].content &&
+        data.candidates[0].content.parts &&
+        data.candidates[0].content.parts[0] &&
+        data.candidates[0].content.parts[0].text) ||
+      "{}";
+
     return {
-      statusCode: lastStatus,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ error: lastError }),
+      body: rawJson,
     };
   } catch (error) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ error: "Eccezione funzione: " + (error && error.message ? error.message : String(error)) }),
     };
   }
 };
