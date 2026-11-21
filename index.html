@@ -3,623 +3,186 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1A56DB" />
-  <title>Chiaro — Documenti e dubbi in parole semplici</title>
+  <title>Chiaro</title>
   <style>
-    :root {
-      --bg: #F8FAFC;
-      --card: #FFFFFF;
-      --primary: #1A56DB;
-      --primary-dark: #1E40AF;
-      --primary-soft: #EFF6FF;
-      --text: #0F172A;
-      --muted: #64748B;
-      --border: #E2E8F0;
-      --ok: #10B981;
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding-bottom: 84px;
-    }
-    .app-wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
-    .brand { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
-    h1 { font-size: 25px; line-height: 1.2; margin: 0 0 8px; }
-    .subtitle { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0 0 20px; }
-
-    .card-primary {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--primary); color: #fff;
-      border: none; border-radius: 16px; padding: 18px;
-      width: 100%; text-align: left; cursor: pointer; margin-bottom: 12px;
-      box-shadow: 0 6px 18px rgba(26, 86, 219, 0.18);
-    }
-    .card-secondary {
-      display: flex; align-items: center; gap: 14px;
-      background: var(--card); color: var(--text);
-      border: 1px solid var(--border); border-radius: 16px; padding: 18px;
-      width: 100%; text-align: left; cursor: pointer; margin-bottom: 22px;
-    }
-    .icon-box {
-      width: 46px; height: 46px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; flex-shrink: 0;
-    }
-    .icon-light { background: rgba(255,255,255,0.2); }
-    .icon-blue { background: var(--primary-soft); color: var(--primary); }
-    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
-    .card-sub { font-size: 13px; opacity: 0.9; line-height: 1.4; }
-    .card-secondary .card-sub { color: var(--muted); opacity: 1; }
-
-    .section-hdr {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 10px;
-    }
-    .section-title { font-size: 16px; font-weight: 700; }
-    .link-btn {
-      background: none; border: none; color: var(--primary);
-      font-weight: 700; font-size: 13px; cursor: pointer; padding: 4px;
-    }
-
-    .panel {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 16px; margin-bottom: 12px;
-    }
-    .back-btn {
-      background: none; border: none; color: var(--text);
-      font-size: 15px; font-weight: 700; padding: 0 0 14px;
-      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-    }
-    .upload-row { display: flex; gap: 10px; margin-bottom: 14px; }
-    .upload-btn {
-      flex: 1; background: var(--primary-soft); color: var(--primary-dark);
-      border: 1px solid #BFDBFE; border-radius: 12px; padding: 13px 10px;
-      font-weight: 700; font-size: 14px; cursor: pointer; text-align: center;
-    }
-    textarea {
-      width: 100%; min-height: 125px; border: 1px solid #CBD5E1;
-      border-radius: 14px; padding: 14px; font-size: 15px;
-      font-family: inherit; color: var(--text); background: var(--card);
-      resize: vertical; margin-bottom: 14px;
-    }
-    .btn-main {
-      width: 100%; background: var(--primary); color: #fff;
-      border: none; border-radius: 14px; padding: 15px;
-      font-size: 16px; font-weight: 700; cursor: pointer;
-    }
-    .btn-main:disabled { opacity: 0.65; cursor: not-allowed; }
-
-    .preview-wrap { margin-bottom: 14px; text-align: center; }
-    .preview-wrap img {
-      max-width: 100%; max-height: 210px; border-radius: 12px;
-      border: 1px solid var(--border); display: block; margin: 0 auto 8px;
-    }
-    .remove-btn {
-      background: none; border: none; color: #DC2626;
-      font-weight: 700; font-size: 13px; cursor: pointer;
-    }
-
-    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-    .badge {
-      font-size: 12px; font-weight: 700; padding: 4px 10px;
-      border-radius: 8px; background: #E0E7FF; color: #1E40AF;
-    }
-    .urg-Alta { background: #FEE2E2; color: #B91C1C; }
-    .urg-Media { background: #FEF3C7; color: #B45309; }
-    .urg-Bassa { background: #DCFCE7; color: #15803D; }
-    .urg-Nessuna { background: #F1F5F9; color: #475569; }
-
-    .blk-label {
-      font-size: 11px; font-weight: 800; letter-spacing: 0.6px;
-      color: var(--muted); margin-bottom: 6px;
-    }
-    .blk-text { font-size: 15px; line-height: 1.5; margin: 0; }
-    .step-item {
-      display: flex; align-items: flex-start; gap: 10px;
-      margin-top: 10px; cursor: pointer; font-size: 15px; line-height: 1.45;
-    }
-    .step-item input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ok); }
-    .done { text-decoration: line-through; color: #94A3B8; }
-
-    .action-box {
-      background: var(--primary-soft); border: 1px solid #BFDBFE;
-      border-radius: 14px; padding: 16px; margin-bottom: 14px;
-    }
-    .action-title { font-size: 14px; font-weight: 800; color: var(--primary-dark); margin-bottom: 8px; }
-    .action-msg {
-      background: #fff; border-radius: 10px; padding: 12px;
-      font-size: 13px; line-height: 1.5; white-space: pre-wrap;
-      color: #1E293B; margin-bottom: 10px; border: 1px solid #DBEAFE;
-    }
-    .btn-outline {
-      flex: 1; background: #fff; color: var(--primary);
-      border: 1.5px solid var(--primary); border-radius: 12px;
-      padding: 13px 10px; font-weight: 700; font-size: 14px; cursor: pointer;
-    }
-    .btn-solid-sm {
-      flex: 1; background: var(--primary); color: #fff;
-      border: none; border-radius: 12px;
-      padding: 13px 10px; font-weight: 700; font-size: 14px; cursor: pointer;
-    }
-    .row-actions { display: flex; gap: 10px; margin-bottom: 14px; }
-
-    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; }
-    .chip {
-      border: 1px solid #CBD5E1; background: #fff; color: #475569;
-      padding: 7px 13px; border-radius: 20px; font-size: 13px;
-      font-weight: 600; white-space: nowrap; cursor: pointer;
-    }
-    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-    .list-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 14px; margin-bottom: 10px;
-    }
-    .disclaimer {
-      font-size: 12px; color: var(--muted); text-align: center;
-      line-height: 1.45; margin-top: 10px;
-    }
-    .toast {
-      position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
-      background: #0F172A; color: #fff; padding: 10px 16px;
-      border-radius: 12px; font-size: 13px; font-weight: 600;
-      z-index: 50; display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: #fff; border-top: 1px solid var(--border);
-      display: flex; justify-content: space-around; padding: 8px 0;
-      z-index: 40;
-    }
-    .nav-btn {
-      background: none; border: none; color: var(--muted);
-      font-size: 12px; font-weight: 700; cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      padding: 4px 14px;
-    }
-    .nav-btn.active { color: var(--primary); }
-    .hidden { display: none !important; }
+    body{margin:0;font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;padding:18px 16px 84px}
+    .wrap{max-width:620px;margin:0 auto}
+    h1{font-size:24px;margin:6px 0}
+    .sub{color:#64748b;font-size:14px;margin:0 0 18px}
+    .btn-card{width:100%;text-align:left;padding:16px;border-radius:14px;border:1px solid #e2e8f0;background:#fff;margin-bottom:12px;font-size:15px;cursor:pointer}
+    .btn-primary{background:#1a56db;color:#fff;border:none;font-weight:700}
+    .box{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:12px}
+    textarea{width:100%;min-height:110px;border:1px solid #cbd5e1;border-radius:12px;padding:12px;font-size:15px;box-sizing:border-box;margin:10px 0}
+    .btn{width:100%;padding:14px;border-radius:12px;border:none;background:#1a56db;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+    .btn-sec{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;margin-top:8px}
+    .back{background:none;border:none;font-size:15px;font-weight:700;padding:0 0 10px;cursor:pointer;color:#0f172a}
+    .lbl{font-size:11px;font-weight:800;color:#64748b;margin-bottom:4px}
+    .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:10px 0}
+    .nav button{background:none;border:none;font-size:13px;font-weight:700;color:#64748b;cursor:pointer}
+    .nav button.on{color:#1a56db}
+    .hidden{display:none}
+    .msg{background:#fef3c7;color:#92400e;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:12px}
   </style>
 </head>
 <body>
-  <div class="app-wrap">
-    <!-- VISTA HOME -->
-    <section id="view-home">
-      <div class="brand">Chiaro</div>
-      <h1>Ciao, cosa vuoi chiarire oggi?</h1>
-      <p class="subtitle">Traduci bollette, lettere, regole e dubbi quotidiani in passi semplici e concreti.</p>
+<div class="wrap">
+  <div id="errBox" class="msg hidden"></div>
 
-      <button class="card-primary" onclick="apriInput('documento')">
-        <div class="icon-box icon-light">📄</div>
-        <div style="flex:1">
-          <div class="card-title">Ho ricevuto un documento</div>
-          <div class="card-sub">Fotografa o carica bollette, avvisi, contratti o lettere</div>
-        </div>
-        <div>›</div>
-      </button>
-
-      <button class="card-secondary" onclick="apriInput('dubbio')">
-        <div class="icon-box icon-blue">💬</div>
-        <div style="flex:1">
-          <div class="card-title">Chiedi un dubbio quotidiano</div>
-          <div class="card-sub">Garanzie, costi, sigle, reclami o "da dove inizio?"</div>
-        </div>
-        <div style="color:var(--muted)">›</div>
-      </button>
-
-      <div class="section-hdr">
-        <span class="section-title">Prossime scadenze</span>
-        <button class="link-btn" onclick="cambiaTab('scadenze')">Vedi tutte</button>
-      </div>
-      <div id="home-scadenze"></div>
-    </section>
-
-    <!-- VISTA INPUT -->
-    <section id="view-input" class="hidden">
-      <button class="back-btn" onclick="tornaHome()">← Indietro</button>
-      <h1 id="input-title">Analizza un documento</h1>
-      <p class="subtitle" id="input-sub">Scatta una foto chiara al foglio oppure incolla il testo qui sotto.</p>
-
-      <div id="foto-controls" class="upload-row">
-        <label class="upload-btn">
-          📷 Scatta foto
-          <input type="file" accept="image/*" capture="environment" hidden onchange="gestisciFile(event)" />
-        </label>
-        <label class="upload-btn">
-          🖼️ Galleria
-          <input type="file" accept="image/*" hidden onchange="gestisciFile(event)" />
-        </label>
-      </div>
-
-      <div id="preview-wrap" class="preview-wrap hidden">
-        <img id="preview-img" alt="Anteprima documento" />
-        <button class="remove-btn" onclick="rimuoviFoto()">Rimuovi foto</button>
-      </div>
-
-      <textarea id="input-testo" placeholder="Scrivi qui il tuo dubbio oppure incolla il testo della lettera o bolletta..."></textarea>
-      <button id="btn-analizza" class="btn-main" onclick="inviaAnalisi()">Spiegamelo in parole semplici</button>
-    </section>
-
-    <!-- VISTA RISULTATO -->
-    <section id="view-risultato" class="hidden">
-      <button class="back-btn" onclick="tornaHome()">← Torna alla Home</button>
-      <div class="badges">
-        <span id="res-cat" class="badge">Categoria</span>
-        <span id="res-urg" class="badge urg-Nessuna">Urgenza</span>
-      </div>
-      <h1 id="res-titolo">Titolo</h1>
-
-      <div class="panel">
-        <div class="blk-label">1. IN PAROLE SEMPLICI</div>
-        <p id="res-semplice" class="blk-text"></p>
-      </div>
-
-      <div class="panel">
-        <div class="blk-label">2. COSA SIGNIFICA PER TE</div>
-        <p id="res-impatto" class="blk-text"></p>
-      </div>
-
-      <div class="panel">
-        <div class="blk-label">3. SCADENZA E URGENZA</div>
-        <p id="res-scadenza" class="blk-text" style="font-weight:700;"></p>
-      </div>
-
-      <div class="panel">
-        <div class="blk-label">4. PROSSIMO PASSO</div>
-        <div id="res-passi"></div>
-      </div>
-
-      <div id="res-azione-box" class="action-box hidden">
-        <div id="res-azione-titolo" class="action-title">Azione pronta</div>
-        <div id="res-azione-testo" class="action-msg"></div>
-        <button class="btn-outline" style="width:100%" onclick="copiaAzione()">📋 Copia testo pronto</button>
-      </div>
-
-      <div class="row-actions">
-        <button class="btn-outline" onclick="salvaScheda(true)">⏰ Metti promemoria</button>
-        <button class="btn-solid-sm" onclick="salvaScheda(false)">📁 Salva in Archivio</button>
-      </div>
-
-      <p class="disclaimer">
-        Chiaro offre supporto informativo e organizzativo: per casi legali, fiscali o sanitari rivolgiti sempre a un professionista o all'ente competente.
-      </p>
-    </section>
-
-    <!-- VISTA SCADENZE -->
-    <section id="view-scadenze" class="hidden">
-      <h1>Da fare & Scadenze</h1>
-      <p class="subtitle">Spunta ciò che hai completato e tieni d'occhio le date importanti.</p>
-      <div id="lista-scadenze"></div>
-    </section>
-
-    <!-- VISTA ARCHIVIO -->
-    <section id="view-archivio" class="hidden">
-      <h1>Archivio</h1>
-      <p class="subtitle">Tutti i documenti e i chiarimenti salvati sul tuo dispositivo.</p>
-      <div class="chips" id="archivio-chips"></div>
-      <div id="lista-archivio"></div>
-    </section>
+  <div id="v-home">
+    <div style="font-weight:800;color:#1a56db">Chiaro</div>
+    <h1>Cosa vuoi chiarire oggi?</h1>
+    <p class="sub">Documenti, bollette, lettere e dubbi in parole semplici.</p>
+    <button class="btn-card btn-primary" id="goDoc">📄 Ho ricevuto un documento<br><span style="font-weight:400;font-size:13px">Foto o testo del documento</span></button>
+    <button class="btn-card" id="goDubbio">💬 Chiedi un dubbio quotidiano<br><span style="font-weight:400;font-size:13px;color:#64748b">Regole, costi, reclami o primi passi</span></button>
+    <div class="lbl" style="margin-top:16px">PROSSIME SCADENZE</div>
+    <div id="homeScad" class="box" style="color:#64748b;font-size:14px">Nessuna scadenza salvata.</div>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div id="v-input" class="hidden">
+    <button class="back" id="back1">← Indietro</button>
+    <h1 id="inTitle">Analizza</h1>
+    <div id="fotoWrap" class="hidden">
+      <input type="file" accept="image/*" capture="environment" id="fotoInput" />
+      <img id="fotoPrev" style="max-width:100%;max-height:180px;margin-top:8px;border-radius:10px;display:none" />
+    </div>
+    <textarea id="inTxt" placeholder="Scrivi qui il tuo dubbio o incolla il testo..."></textarea>
+    <button class="btn" id="btnRun">Spiegamelo in parole semplici</button>
+  </div>
 
-  <nav class="bottom-nav">
-    <button id="nav-home" class="nav-btn active" onclick="cambiaTab('home')">
-      <span>🏠</span><span>Home</span>
-    </button>
-    <button id="nav-scadenze" class="nav-btn" onclick="cambiaTab('scadenze')">
-      <span>📅</span><span>Scadenze</span>
-    </button>
-    <button id="nav-archivio" class="nav-btn" onclick="cambiaTab('archivio')">
-      <span>🗂️</span><span>Archivio</span>
-    </button>
-  </nav>
+  <div id="v-res" class="hidden">
+    <button class="back" id="back2">← Home</button>
+    <div id="rCat" style="font-size:12px;font-weight:700;color:#1a56db"></div>
+    <h1 id="rTit"></h1>
+    <div class="box"><div class="lbl">1. IN PAROLE SEMPLICI</div><div id="rSem"></div></div>
+    <div class="box"><div class="lbl">2. COSA SIGNIFICA PER TE</div><div id="rImp"></div></div>
+    <div class="box"><div class="lbl">3. SCADENZA E URGENZA</div><div id="rSca"></div></div>
+    <div class="box"><div class="lbl">4. PROSSIMO PASSO</div><div id="rPas"></div></div>
+    <div id="rAzBox" class="box hidden" style="background:#eff6ff;border-color:#bfdbfe">
+      <div class="lbl" style="color:#1e40af">AZIONE PRONTA</div>
+      <div id="rAzTxt" style="white-space:pre-wrap;font-size:14px;margin-bottom:8px"></div>
+      <button class="btn btn-sec" id="btnCopy">Copia testo</button>
+    </div>
+    <button class="btn" id="btnSave">Salva in Archivio e Scadenze</button>
+  </div>
 
-  <script>
-    const STORAGE_KEY = "chiaro_schede_v1";
-    const API_ENDPOINT = "/.netlify/functions/analizza-chiaro";
+  <div id="v-scad" class="hidden">
+    <h1>Scadenze</h1>
+    <div id="listScad"></div>
+  </div>
 
-    let schede = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    let schedaAttuale = null;
-    let fotoBase64 = null;
-    let fotoMime = "image/jpeg";
-    let categoriaFiltro = "Tutti";
+  <div id="v-arc" class="hidden">
+    <h1>Archivio</h1>
+    <div id="listArc"></div>
+  </div>
+</div>
 
-    function mostraToast(msg) {
-      const t = document.getElementById("toast");
-      t.textContent = msg;
-      t.style.display = "block";
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => { t.style.display = "none"; }, 2400);
+<div class="nav">
+  <button id="nHome" class="on">🏠 Home</button>
+  <button id="nScad">📅 Scadenze</button>
+  <button id="nArc">🗂️ Archivio</button>
+</div>
+
+<script>
+(function(){
+  const KEY="chiaro_v1", URL="/.netlify/functions/analizza-chiaro";
+  let items=[]; try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}
+  let cur=null, b64=null, mime="image/jpeg";
+
+  const showErr=(m)=>{const el=document.getElementById("errBox");el.textContent=m;el.classList.remove("hidden")};
+  const clearErr=()=>document.getElementById("errBox").classList.add("hidden");
+  const views=["v-home","v-input","v-res","v-scad","v-arc"];
+  const openView=(id)=>{clearErr();views.forEach(v=>document.getElementById(v).classList.toggle("hidden",v!==id))};
+  const setTab=(btnId)=>{["nHome","nScad","nArc"].forEach(b=>document.getElementById(b).classList.toggle("on",b===btnId))};
+
+  const renderHome=()=>{
+    const sc=items.filter(x=>!x.fatto);
+    document.getElementById("homeScad").innerHTML=sc.length
+      ? sc.slice(0,3).map(x=>"<b>"+x.titolo+"</b> · "+(x.scadenza_testo||"")).join("<br>")
+      : "Nessuna scadenza attiva.";
+  };
+
+  document.getElementById("goDoc").onclick=()=>{
+    b64=null; document.getElementById("fotoInput").value=""; document.getElementById("fotoPrev").style.display="none";
+    document.getElementById("inTxt").value=""; document.getElementById("fotoWrap").classList.remove("hidden");
+    document.getElementById("inTitle").textContent="Analizza un documento"; openView("v-input");
+  };
+  document.getElementById("goDubbio").onclick=()=>{
+    b64=null; document.getElementById("inTxt").value=""; document.getElementById("fotoWrap").classList.add("hidden");
+    document.getElementById("inTitle").textContent="Chiedi un dubbio"; openView("v-input");
+  };
+  document.getElementById("back1").onclick=()=>{openView("v-home");setTab("nHome");renderHome()};
+  document.getElementById("back2").onclick=()=>{openView("v-home");setTab("nHome");renderHome()};
+
+  document.getElementById("fotoInput").onchange=(e)=>{
+    const f=e.target.files&&e.target.files[0]; if(!f)return; mime=f.type||"image/jpeg";
+    const r=new FileReader();
+    r.onload=()=>{const res=String(r.result||""); b64=res.split(",")[1]||null; const img=document.getElementById("fotoPrev"); img.src=res; img.style.display="block"};
+    r.readAsDataURL(f);
+  };
+
+  document.getElementById("btnRun").onclick=async()=>{
+    const testo=document.getElementById("inTxt").value.trim();
+    if(!testo&&!b64){showErr("Scrivi un dubbio o scegli una foto.");return}
+    const btn=document.getElementById("btnRun"); btn.disabled=true; btn.textContent="Sto elaborando..."; clearErr();
+    try{
+      const r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({testo,immagineBase64:b64,mimeType:mime})});
+      const d=await r.json();
+      if(!r.ok||d.error)throw new Error(d.error||"Errore server");
+      cur={id:String(Date.now()),fatto:false,...d};
+      renderRes(cur);
+    }catch(err){
+      showErr("Errore analisi: "+err.message+". Verifica GEMINI_API_KEY su Netlify e riprova.");
+    }finally{
+      btn.disabled=false; btn.textContent="Spiegamelo in parole semplici";
     }
+  };
 
-    function salvaStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(schede));
-    }
+  function renderRes(d){
+    openView("v-res");
+    document.getElementById("rCat").textContent=(d.categoria||"Generale")+" · Urgenza: "+(d.urgenza||"Nessuna");
+    document.getElementById("rTit").textContent=d.titolo||"Chiarimento";
+    document.getElementById("rSem").textContent=d.in_parole_semplici||"";
+    document.getElementById("rImp").textContent=d.cosa_significa_per_te||"";
+    document.getElementById("rSca").textContent=d.scadenza_testo||"Nessuna scadenza fissa";
+    const passi=Array.isArray(d.prossimo_passo)?d.prossimo_passo:[];
+    document.getElementById("rPas").innerHTML=passi.map(p=>"• "+p).join("<br>")||"—";
+    const az=d.azione_pronta&&d.azione_pronta.testo_copiabile;
+    document.getElementById("rAzBox").classList.toggle("hidden",!az);
+    if(az)document.getElementById("rAzTxt").textContent=d.azione_pronta.testo_copiabile;
+  }
 
-    function nascondiTutte() {
-      ["view-home", "view-input", "view-risultato", "view-scadenze", "view-archivio"]
-        .forEach(id => document.getElementById(id).classList.add("hidden"));
-    }
+  document.getElementById("btnCopy").onclick=async()=>{
+    const txt=document.getElementById("rAzTxt").textContent;
+    try{await navigator.clipboard.writeText(txt);alert("Testo copiato!")}catch(e){alert("Copia il testo dal riquadro.")}
+  };
 
-    function cambiaTab(tab) {
-      ["home", "scadenze", "archivio"].forEach(t => {
-        document.getElementById("nav-" + t).classList.toggle("active", t === tab);
-      });
-      nascondiTutte();
-      if (tab === "home") {
-        renderHomeScadenze();
-        document.getElementById("view-home").classList.remove("hidden");
-      } else if (tab === "scadenze") {
-        renderScadenze();
-        document.getElementById("view-scadenze").classList.remove("hidden");
-      } else if (tab === "archivio") {
-        renderArchivio();
-        document.getElementById("view-archivio").classList.remove("hidden");
-      }
-    }
+  document.getElementById("btnSave").onclick=()=>{
+    if(!cur)return;
+    items.unshift(cur);
+    localStorage.setItem(KEY,JSON.stringify(items));
+    alert("Salvato!");
+  };
 
-    function tornaHome() {
-      cambiaTab("home");
-    }
+  document.getElementById("nHome").onclick=()=>{setTab("nHome");renderHome();openView("v-home")};
+  document.getElementById("nScad").onclick=()=>{
+    setTab("nScad"); openView("v-scad");
+    const el=document.getElementById("listScad");
+    el.innerHTML=items.length?items.map((x,i)=>"<div class='box'><label><input type='checkbox' "+(x.fatto?"checked":"")+" data-i='"+i+"'> <b>"+x.titolo+"</b></label><div style='font-size:13px;color:#64748b'>"+(x.scadenza_testo||"")+"</div></div>").join(""):"<div class='box'>Nessuna scadenza.</div>";
+    el.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+      cb.onchange=()=>{items[cb.dataset.i].fatto=cb.checked;localStorage.setItem(KEY,JSON.stringify(items))};
+    });
+  };
+  document.getElementById("nArc").onclick=()=>{
+    setTab("nArc"); openView("v-arc");
+    const el=document.getElementById("listArc");
+    el.innerHTML=items.length?items.map((x,i)=>"<div class='box' data-a='"+i+"'><b>"+x.titolo+"</b><div style='font-size:13px;color:#64748b'>"+(x.categoria||"")+"</div></div>").join(""):"<div class='box'>Archivio vuoto.</div>";
+    el.querySelectorAll("[data-a]").forEach(row=>{
+      row.onclick=()=>{cur=items[row.dataset.a];renderRes(cur)};
+    });
+  };
 
-    function apriInput(modalita) {
-      nascondiTutte();
-      document.getElementById("view-input").classList.remove("hidden");
-      document.getElementById("input-testo").value = "";
-      rimuoviFoto();
-      const isDoc = modalita === "documento";
-      document.getElementById("foto-controls").classList.toggle("hidden", !isDoc);
-      document.getElementById("input-title").textContent = isDoc
-        ? "Analizza un documento"
-        : "Chiedi in parole semplici";
-      document.getElementById("input-sub").textContent = isDoc
-        ? "Scatta una foto al documento o incolla il testo qui sotto."
-        : "Scrivi cosa non ti è chiaro o come vuoi muoverti oggi.";
-    }
-
-    function gestisciFile(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      fotoMime = file.type || "image/jpeg";
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        fotoBase64 = result.split(",")[1] || null;
-        const img = document.getElementById("preview-img");
-        img.src = result;
-        document.getElementById("preview-wrap").classList.remove("hidden");
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function rimuoviFoto() {
-      fotoBase64 = null;
-      document.getElementById("preview-img").src = "";
-      document.getElementById("preview-wrap").classList.add("hidden");
-    }
-
-    async function inviaAnalisi() {
-      const testo = document.getElementById("input-testo").value.trim();
-      if (!testo && !fotoBase64) {
-        mostraToast("Inserisci del testo o carica una foto");
-        return;
-      }
-
-      const btn = document.getElementById("btn-analizza");
-      btn.disabled = true;
-      btn.textContent = "Sto leggendo e semplificando...";
-
-      try {
-        const res = await fetch(API_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            testo,
-            immagineBase64: fotoBase64,
-            mimeType: fotoMime
-          })
-        });
-
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || "Errore dal server");
-        }
-
-        schedaAttuale = {
-          id: String(Date.now()),
-          dataCreazione: new Date().toLocaleDateString("it-IT"),
-          inScadenze: false,
-          fatto: false,
-          completati: [],
-          ...data
-        };
-
-        mostraRisultato(schedaAttuale);
-      } catch (err) {
-        mostraToast("Controlla la chiave GEMINI_API_KEY su Netlify e riprova");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Spiegamelo in parole semplici";
-      }
-    }
-
-    function mostraRisultato(s) {
-      nascondiTutte();
-      document.getElementById("view-risultato").classList.remove("hidden");
-
-      document.getElementById("res-cat").textContent = s.categoria || "Generale";
-      const urgEl = document.getElementById("res-urg");
-      const urgVal = s.urgenza || "Nessuna";
-      urgEl.textContent = "Urgenza: " + urgVal;
-      urgEl.className = "badge urg-" + urgVal;
-
-      document.getElementById("res-titolo").textContent = s.titolo || "Analisi completata";
-      document.getElementById("res-semplice").textContent = s.in_parole_semplici || "";
-      document.getElementById("res-impatto").textContent = s.cosa_significa_per_te || "";
-      document.getElementById("res-scadenza").textContent = s.scadenza_testo || "Nessuna scadenza fissa";
-
-      const passiEl = document.getElementById("res-passi");
-      passiEl.innerHTML = "";
-      const passi = Array.isArray(s.prossimo_passo) ? s.prossimo_passo : [];
-      const doneList = Array.isArray(s.completati) ? s.completati : [];
-
-      passi.forEach((passo, idx) => {
-        const checked = doneList.includes(idx);
-        const label = document.createElement("label");
-        label.className = "step-item";
-        label.innerHTML = `
-          <input type="checkbox" ${checked ? "checked" : ""} />
-          <span class="${checked ? "done" : ""}">${passo}</span>
-        `;
-        label.querySelector("input").addEventListener("change", (e) => {
-          const isDone = e.target.checked;
-          if (!Array.isArray(schedaAttuale.completati)) schedaAttuale.completati = [];
-          if (isDone && !schedaAttuale.completati.includes(idx)) {
-            schedaAttuale.completati.push(idx);
-          } else if (!isDone) {
-            schedaAttuale.completati = schedaAttuale.completati.filter(x => x !== idx);
-          }
-          label.querySelector("span").classList.toggle("done", isDone);
-          aggiornaSeSalvata(schedaAttuale);
-        });
-        passiEl.appendChild(label);
-      });
-
-      const azBox = document.getElementById("res-azione-box");
-      if (s.azione_pronta && s.azione_pronta.testo_copiabile) {
-        azBox.classList.remove("hidden");
-        document.getElementById("res-azione-titolo").textContent =
-          "Azione pronta: " + (s.azione_pronta.titolo_azione || "Messaggio");
-        document.getElementById("res-azione-testo").textContent = s.azione_pronta.testo_copiabile;
-      } else {
-        azBox.classList.add("hidden");
-      }
-    }
-
-    function aggiornaSeSalvata(s) {
-      const idx = schede.findIndex(item => item.id === s.id);
-      if (idx !== -1) {
-        schede[idx] = s;
-        salvaStorage();
-      }
-    }
-
-    function salvaScheda(conScadenza) {
-      if (!schedaAttuale) return;
-      schedaAttuale.inScadenze = conScadenza ? true : Boolean(schedaAttuale.inScadenze);
-      const idx = schede.findIndex(item => item.id === schedaAttuale.id);
-      if (idx === -1) {
-        schede.unshift({ ...schedaAttuale });
-      } else {
-        schede[idx] = { ...schedaAttuale };
-      }
-      salvaStorage();
-      mostraToast(conScadenza ? "Aggiunto alle Scadenze" : "Salvato in Archivio");
-    }
-
-    async function copiaAzione() {
-      const txt = document.getElementById("res-azione-testo").textContent;
-      try {
-        await navigator.clipboard.writeText(txt);
-        mostraToast("Testo copiato negli appunti");
-      } catch {
-        mostraToast("Seleziona e copia il testo dal riquadro");
-      }
-    }
-
-    function renderHomeScadenze() {
-      const wrap = document.getElementById("home-scadenze");
-      const attive = schede.filter(s => s.inScadenze && !s.fatto);
-      if (attive.length === 0) {
-        wrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Nessuna scadenza attiva al momento.</div>`;
-        return;
-      }
-      wrap.innerHTML = attive.slice(0, 3).map(s => `
-        <div class="list-row" onclick="apriSalvata('${s.id}')">
-          <div>
-            <div style="font-weight:700;font-size:15px;">${s.titolo}</div>
-            <div style="font-size:13px;color:var(--muted);">${s.scadenza_testo || ""}</div>
-          </div>
-          <span class="badge urg-${s.urgenza || "Nessuna"}">${s.urgenza || "Nessuna"}</span>
-        </div>
-      `).join("");
-    }
-
-    function renderScadenze() {
-      const wrap = document.getElementById("lista-scadenze");
-      const lista = schede.filter(s => s.inScadenze);
-      if (lista.length === 0) {
-        wrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Non hai ancora salvato scadenze.</div>`;
-        return;
-      }
-      wrap.innerHTML = lista.map(s => `
-        <div class="list-row">
-          <div style="display:flex;align-items:center;gap:12px;flex:1;">
-            <input type="checkbox" ${s.fatto ? "checked" : ""} style="width:20px;height:20px;accent-color:var(--ok);" onchange="toggleFatto('${s.id}', this.checked)" />
-            <div onclick="apriSalvata('${s.id}')" style="flex:1;cursor:pointer;">
-              <div class="${s.fatto ? "done" : ""}" style="font-weight:700;font-size:15px;">${s.titolo}</div>
-              <div style="font-size:13px;color:var(--muted);">${s.categoria} · ${s.scadenza_testo || ""}</div>
-            </div>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function toggleFatto(id, fatto) {
-      schede = schede.map(s => s.id === id ? { ...s, fatto } : s);
-      salvaStorage();
-      renderScadenze();
-    }
-
-    function renderArchivio() {
-      const cats = ["Tutti", "Casa & Utenze", "Soldi & Contratti", "Salute & Pratiche", "Regole & Acquisti"];
-      const chipsWrap = document.getElementById("archivio-chips");
-      chipsWrap.innerHTML = cats.map(c => `
-        <button class="chip ${categoriaFiltro === c ? "active" : ""}" onclick="selezionaFiltro('${c}')">${c}</button>
-      `).join("");
-
-      const filtrati = categoriaFiltro === "Tutti"
-        ? schede
-        : schede.filter(s => s.categoria === categoriaFiltro);
-
-      const listWrap = document.getElementById("lista-archivio");
-      if (filtrati.length === 0) {
-        listWrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Nessuna scheda in questa sezione.</div>`;
-        return;
-      }
-      listWrap.innerHTML = filtrati.map(s => `
-        <div class="list-row" onclick="apriSalvata('${s.id}')" style="cursor:pointer;">
-          <div>
-            <div style="font-weight:700;font-size:15px;">${s.titolo}</div>
-            <div style="font-size:13px;color:var(--muted);">${s.categoria} · ${s.dataCreazione || ""}</div>
-          </div>
-          <span style="color:var(--muted)">›</span>
-        </div>
-      `).join("");
-    }
-
-    function selezionaFiltro(cat) {
-      categoriaFiltro = cat;
-      renderArchivio();
-    }
-
-    function apriSalvata(id) {
-      const trovata = schede.find(s => s.id === id);
-      if (!trovata) return;
-      schedaAttuale = { ...trovata };
-      ["home", "scadenze", "archivio"].forEach(t => {
-        document.getElementById("nav-" + t).classList.toggle("active", t === "home");
-      });
-      mostraRisultato(schedaAttuale);
-    }
-
-    renderHomeScadenze();
-  </script>
+  renderHome();
+})();
+</script>
 </body>
 </html>
-     
