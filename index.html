@@ -165,6 +165,13 @@
       box-shadow: none;
       margin-top: 8px;
     }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .btn-row .btn { margin-top: 0; padding: 13px 10px; font-size: 14px; }
     .btn-del {
       background: #fef2f2;
       color: var(--danger);
@@ -326,12 +333,16 @@
     </div>
 
     <div id="rAzBox" class="box hidden" style="background:#eff6ff;border-color:#bfdbfe">
-      <div class="lbl" style="color:#1e40af">Azione pronta da inviare</div>
+      <div class="lbl" style="color:#1e40af">Bozza / Azione pronta</div>
       <div id="rAzTxt" style="white-space:pre-wrap;font-size:14px;line-height:1.45;margin:8px 0"></div>
-      <button class="btn btn-sec" id="btnCopy">📋 Copia testo</button>
+      <button class="btn btn-sec" id="btnCopy">📋 Copia bozza</button>
     </div>
 
     <button class="btn" id="btnSave">💾 Salva in Archivio</button>
+    <div class="btn-row">
+      <button class="btn btn-sec" id="btnShare">📤 Condividi</button>
+      <button class="btn btn-sec" id="btnDownload">⬇️ Scarica .txt</button>
+    </div>
   </div>
 
   <div id="v-scad" class="wrap hidden">
@@ -372,6 +383,39 @@
   };
 
   const salvaItems=()=>{ localStorage.setItem(KEY,JSON.stringify(items)); };
+
+  const formattaDocumentoTesto=(d)=>{
+    if(!d) return "";
+    const passi=Array.isArray(d.prossimo_passo)&&d.prossimo_passo.length
+      ? d.prossimo_passo.map(p=>"- "+p).join("\n")
+      : "- Nessun passo indicato";
+    const righe=[
+      "CHIARO — RIEPILOGO",
+      "Titolo: "+(d.titolo||"Chiarimento"),
+      "Categoria: "+(d.categoria||"Generale"),
+      haScadenzaReale(d) ? "Scadenza: "+d.scadenza_testo : null,
+      "",
+      "1. IN PAROLE SEMPLICI",
+      d.in_parole_semplici||"",
+      "",
+      "2. COSA SIGNIFICA PER TE",
+      d.cosa_significa_per_te||"",
+      "",
+      "3. PROSSIMO PASSO",
+      passi
+    ].filter(x=>x!==null);
+
+    const az=d.azione_pronta&&d.azione_pronta.testo_copiabile;
+    if(az){
+      righe.push("", "4. BOZZA / AZIONE PRONTA", az);
+    }
+    return righe.join("\n");
+  };
+
+  const nomeFilePulito=(titolo)=>{
+    const base=(titolo||"chiaro-bozza").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    return (base||"chiaro-bozza")+".txt";
+  };
 
   const renderHome=()=>{
     const sc=items.filter(x=>!x.fatto && haScadenzaReale(x));
@@ -464,7 +508,39 @@
 
   document.getElementById("btnCopy").onclick=async()=>{
     const txt=document.getElementById("rAzTxt").textContent;
-    try{await navigator.clipboard.writeText(txt);alert("Testo copiato!")}catch(e){alert("Seleziona e copia il testo dal riquadro.")}
+    try{await navigator.clipboard.writeText(txt);alert("Bozza copiata!")}catch(e){alert("Seleziona e copia il testo dal riquadro.")}
+  };
+
+  document.getElementById("btnShare").onclick=async()=>{
+    if(!cur) return;
+    const testoCondiviso=formattaDocumentoTesto(cur);
+    if(navigator.share){
+      try{
+        await navigator.share({title:cur.titolo||"Chiaro",text:testoCondiviso});
+        return;
+      }catch(e){
+        if(e && e.name==="AbortError") return;
+      }
+    }
+    try{
+      await navigator.clipboard.writeText(testoCondiviso);
+      alert("Riepilogo copiato negli appunti: puoi incollarlo dove vuoi.");
+    }catch(e){
+      alert("Condivisione non supportata su questo browser.");
+    }
+  };
+
+  document.getElementById("btnDownload").onclick=()=>{
+    if(!cur) return;
+    const blob=new Blob([formattaDocumentoTesto(cur)],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a");
+    const u=URL.createObjectURL(blob);
+    a.href=u;
+    a.download=nomeFilePulito(cur.titolo);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),1000);
   };
 
   document.getElementById("btnSave").onclick=()=>{
