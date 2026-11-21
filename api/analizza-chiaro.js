@@ -1,16 +1,17 @@
-const SYSTEM_PROMPT = `Sei il motore intelligente di "Chiaro", un'app che aiuta i cittadini italiani a capire documenti complessi, lettere, bollette, regole e dubbi quotidiani.
-Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
+const SYSTEM_PROMPT = `Sei il motore veloce di "Chiaro", un'app italiana che spiega documenti, lettere, bollette e dubbi quotidiani in modo breve e pratico.
+Rispondi SEMPRE in modo conciso e diretto, senza lungaggini.
+Restituisci ESCLUSIVAMENTE un JSON valido con questa struttura:
 {
   "titolo": "Titolo breve (max 5 parole)",
   "categoria": "Casa & Utenze | Soldi & Contratti | Salute & Pratiche | Regole & Acquisti",
-  "in_parole_semplici": "Spiegazione chiara in 2-3 frasi senza burocratese",
-  "cosa_significa_per_te": "Impatto concreto su soldi, tempi, diritti o obblighi",
-  "scadenza_testo": "Data limite leggibile oppure 'Nessuna scadenza fissa'",
+  "in_parole_semplici": "Spiegazione chiara in 1-2 frasi brevi",
+  "cosa_significa_per_te": "Impatto pratico in 1-2 frasi brevi",
+  "scadenza_testo": "Data o termine concreto oppure 'Nessuna scadenza fissa'",
   "urgenza": "Alta | Media | Bassa | Nessuna",
-  "prossimo_passo": ["Azione pratica 1", "Azione pratica 2"],
+  "prossimo_passo": ["Azione breve 1", "Azione breve 2"],
   "azione_pronta": {
-    "titolo_azione": "Titolo breve dell'email o reclamo",
-    "testo_copiabile": "Testo pronto da copiare con segnaposto [NOME]"
+    "titolo_azione": "Titolo breve",
+    "testo_copiabile": "Testo essenziale pronto da copiare con [CAMPI]"
   }
 }
 Se non serve scrivere a nessuno, imposta "azione_pronta": null.`;
@@ -50,8 +51,8 @@ export default async function handler(req, res) {
     }
     parts.push({
       text: testo.trim()
-        ? "Analizza questa richiesta o documento del cittadino:\n" + testo.trim()
-        : "Analizza questo documento fotografato e spiegamelo in parole semplici.",
+        ? "Analizza in modo sintetico e pratico:\n" + testo.trim()
+        : "Analizza questo documento in modo breve e chiaro.",
     });
 
     const url =
@@ -64,7 +65,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ role: "user", parts }],
-        generationConfig: { response_mime_type: "application/json" },
+        generationConfig: {
+          response_mime_type: "application/json",
+          maxOutputTokens: 900,
+        },
       }),
     });
 
@@ -106,4 +110,4 @@ export default async function handler(req, res) {
       error: "Eccezione funzione: " + (error && error.message ? error.message : String(error)),
     });
   }
-          }
+}
