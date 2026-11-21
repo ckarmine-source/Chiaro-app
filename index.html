@@ -84,7 +84,7 @@
 
 <script>
 (function(){
-  const KEY="chiaro_v1", URL="/.netlify/functions/analizza-chiaro";
+  const KEY="chiaro_v1", URL="/api/analizza-chiaro";
   let items=[]; try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}
   let cur=null, b64=null, mime="image/jpeg";
 
