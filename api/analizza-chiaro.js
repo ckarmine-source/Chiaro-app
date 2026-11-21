@@ -1,20 +1,20 @@
-const SYSTEM_PROMPT = `Sei il motore veloce di "Chiaro", un'app italiana che spiega documenti, lettere, bollette e dubbi quotidiani in modo breve e pratico.
-Rispondi SEMPRE in modo conciso e diretto, senza lungaggini.
-Restituisci ESCLUSIVAMENTE un JSON valido con questa struttura:
+const SYSTEM_PROMPT = `Sei il motore rapido di "Chiaro". Spiega documenti, lettere, bollette e dubbi in italiano semplice, chiaro e pratico.
+Sii sintetico (max 2 frasi brevi per campo).
+Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
 {
   "titolo": "Titolo breve (max 5 parole)",
   "categoria": "Casa & Utenze | Soldi & Contratti | Salute & Pratiche | Regole & Acquisti",
-  "in_parole_semplici": "Spiegazione chiara in 1-2 frasi brevi",
-  "cosa_significa_per_te": "Impatto pratico in 1-2 frasi brevi",
+  "in_parole_semplici": "Spiegazione chiara in 1-2 frasi",
+  "cosa_significa_per_te": "Effetto pratico in 1-2 frasi",
   "scadenza_testo": "Data o termine concreto oppure 'Nessuna scadenza fissa'",
   "urgenza": "Alta | Media | Bassa | Nessuna",
   "prossimo_passo": ["Azione breve 1", "Azione breve 2"],
   "azione_pronta": {
     "titolo_azione": "Titolo breve",
-    "testo_copiabile": "Testo essenziale pronto da copiare con [CAMPI]"
+    "testo_copiabile": "Testo pronto da copiare con segnaposto [CAMPI]"
   }
 }
-Se non serve scrivere a nessuno, imposta "azione_pronta": null.`;
+Se non serve scrivere a nessuno o preparare una bozza, imposta "azione_pronta": null.`;
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const testo = body.testo || "";
+    const testo = (body.testo || "").trim();
     const immagineBase64 = body.immagineBase64 || null;
     const mimeType = body.mimeType || "image/jpeg";
 
@@ -50,13 +50,13 @@ export default async function handler(req, res) {
       });
     }
     parts.push({
-      text: testo.trim()
-        ? "Analizza in modo sintetico e pratico:\n" + testo.trim()
-        : "Analizza questo documento in modo breve e chiaro.",
+      text: testo
+        ? "Rispondi in modo diretto e pratico:\n" + testo
+        : "Spiega questo documento in modo diretto e pratico.",
     });
 
     const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" +
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
       encodeURIComponent(apiKey);
 
     const response = await fetch(url, {
@@ -67,7 +67,9 @@ export default async function handler(req, res) {
         contents: [{ role: "user", parts }],
         generationConfig: {
           response_mime_type: "application/json",
-          maxOutputTokens: 900,
+          temperature: 0.2,
+          maxOutputTokens: 700,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     });
@@ -110,4 +112,4 @@ export default async function handler(req, res) {
       error: "Eccezione funzione: " + (error && error.message ? error.message : String(error)),
     });
   }
-}
+                                       }
