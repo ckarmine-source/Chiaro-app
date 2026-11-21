@@ -511,4 +511,115 @@
 
     function salvaScheda(conScadenza) {
       if (!schedaAttuale) return;
+      schedaAttuale.inScadenze = conScadenza ? true : Boolean(schedaAttuale.inScadenze);
+      const idx = schede.findIndex(item => item.id === schedaAttuale.id);
+      if (idx === -1) {
+        schede.unshift({ ...schedaAttuale });
+      } else {
+        schede[idx] = { ...schedaAttuale };
+      }
+      salvaStorage();
+      mostraToast(conScadenza ? "Aggiunto alle Scadenze" : "Salvato in Archivio");
+    }
+
+    async function copiaAzione() {
+      const txt = document.getElementById("res-azione-testo").textContent;
+      try {
+        await navigator.clipboard.writeText(txt);
+        mostraToast("Testo copiato negli appunti");
+      } catch {
+        mostraToast("Seleziona e copia il testo dal riquadro");
+      }
+    }
+
+    function renderHomeScadenze() {
+      const wrap = document.getElementById("home-scadenze");
+      const attive = schede.filter(s => s.inScadenze && !s.fatto);
+      if (attive.length === 0) {
+        wrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Nessuna scadenza attiva al momento.</div>`;
+        return;
+      }
+      wrap.innerHTML = attive.slice(0, 3).map(s => `
+        <div class="list-row" onclick="apriSalvata('${s.id}')">
+          <div>
+            <div style="font-weight:700;font-size:15px;">${s.titolo}</div>
+            <div style="font-size:13px;color:var(--muted);">${s.scadenza_testo || ""}</div>
+          </div>
+          <span class="badge urg-${s.urgenza || "Nessuna"}">${s.urgenza || "Nessuna"}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderScadenze() {
+      const wrap = document.getElementById("lista-scadenze");
+      const lista = schede.filter(s => s.inScadenze);
+      if (lista.length === 0) {
+        wrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Non hai ancora salvato scadenze.</div>`;
+        return;
+      }
+      wrap.innerHTML = lista.map(s => `
+        <div class="list-row">
+          <div style="display:flex;align-items:center;gap:12px;flex:1;">
+            <input type="checkbox" ${s.fatto ? "checked" : ""} style="width:20px;height:20px;accent-color:var(--ok);" onchange="toggleFatto('${s.id}', this.checked)" />
+            <div onclick="apriSalvata('${s.id}')" style="flex:1;cursor:pointer;">
+              <div class="${s.fatto ? "done" : ""}" style="font-weight:700;font-size:15px;">${s.titolo}</div>
+              <div style="font-size:13px;color:var(--muted);">${s.categoria} · ${s.scadenza_testo || ""}</div>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function toggleFatto(id, fatto) {
+      schede = schede.map(s => s.id === id ? { ...s, fatto } : s);
+      salvaStorage();
+      renderScadenze();
+    }
+
+    function renderArchivio() {
+      const cats = ["Tutti", "Casa & Utenze", "Soldi & Contratti", "Salute & Pratiche", "Regole & Acquisti"];
+      const chipsWrap = document.getElementById("archivio-chips");
+      chipsWrap.innerHTML = cats.map(c => `
+        <button class="chip ${categoriaFiltro === c ? "active" : ""}" onclick="selezionaFiltro('${c}')">${c}</button>
+      `).join("");
+
+      const filtrati = categoriaFiltro === "Tutti"
+        ? schede
+        : schede.filter(s => s.categoria === categoriaFiltro);
+
+      const listWrap = document.getElementById("lista-archivio");
+      if (filtrati.length === 0) {
+        listWrap.innerHTML = `<div class="panel" style="color:var(--muted);font-size:14px;">Nessuna scheda in questa sezione.</div>`;
+        return;
+      }
+      listWrap.innerHTML = filtrati.map(s => `
+        <div class="list-row" onclick="apriSalvata('${s.id}')" style="cursor:pointer;">
+          <div>
+            <div style="font-weight:700;font-size:15px;">${s.titolo}</div>
+            <div style="font-size:13px;color:var(--muted);">${s.categoria} · ${s.dataCreazione || ""}</div>
+          </div>
+          <span style="color:var(--muted)">›</span>
+        </div>
+      `).join("");
+    }
+
+    function selezionaFiltro(cat) {
+      categoriaFiltro = cat;
+      renderArchivio();
+    }
+
+    function apriSalvata(id) {
+      const trovata = schede.find(s => s.id === id);
+      if (!trovata) return;
+      schedaAttuale = { ...trovata };
+      ["home", "scadenze", "archivio"].forEach(t => {
+        document.getElementById("nav-" + t).classList.toggle("active", t === "home");
+      });
+      mostraRisultato(schedaAttuale);
+    }
+
+    renderHomeScadenze();
+  </script>
+</body>
+</html>
      
