@@ -296,12 +296,14 @@
     <p id="inSub" style="margin:0 0 12px;font-size:14px;color:#64748b"></p>
 
     <div id="fotoWrap" class="hidden">
-      <label class="file-box" for="fotoInput">
-        <span style="font-size:24px">📷</span>
-        <span style="font-weight:700;color:#1d4ed8;font-size:14px;margin-top:4px">Scatta o scegli foto documento</span>
-        <span style="font-size:12px;color:#64748b">Bollette, multe, raccomandate, avvisi</span>
-        <input type="file" accept="image/*" id="fotoInput" style="display:none" />
-      </label>
+      <<label class="file-box" for="fotoInput">
+  🖼️ Scegli dalla galleria
+  <input type="file" accept="image/*" id="fotoInput" hidden />
+</label>
+<label class="file-box" for="cameraInput">
+  📷 Scatta una foto
+  <input type="file" accept="image/*" capture="environment" id="cameraInput" hidden />
+</label>
       <img id="fotoPrev" style="max-width:100%;max-height:200px;margin:10px auto 0;border-radius:12px;display:none" />
     </div>
 
