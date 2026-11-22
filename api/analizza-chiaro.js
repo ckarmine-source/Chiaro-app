@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     parts.push({
       text: testo
         ? "Rispondi in modo diretto e pratico:\n" + testo
-        : "Spiega questo documento in modo diretto e pratico.",
+        : "Spiega questa foto/documento in modo diretto e pratico.",
     });
 
     const url =
