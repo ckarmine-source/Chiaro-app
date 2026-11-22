@@ -558,4 +558,96 @@
   document.getElementById("btnDownload").onclick=()=>{
     if(!cur) return;
     const blob=new Blob([formattaDocumentoTesto(cur)],{type:"text/plain;charset=utf-8"});
-    const a
+    const a=document.createElement("a");
+    const u=URL.createObjectURL(blob);
+    a.href=u;
+    a.download=nomeFilePulito(cur.titolo);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),1000);
+  };
+
+  document.getElementById("btnSave").onclick=()=>{
+    if(!cur)return;
+    if(!items.some(x=>x.id===cur.id)) items.unshift(cur);
+    salvaItems();
+    renderHome();
+    alert(haScadenzaReale(cur) ? "Salvato in Archivio e Scadenze!" : "Salvato in Archivio!");
+  };
+
+  function renderScadList(){
+    const scadenze=items.map((x,i)=>({x,i})).filter(({x})=>haScadenzaReale(x));
+    const el=document.getElementById("listScad");
+    el.innerHTML=scadenze.length
+      ? scadenze.map(({x,i})=>
+        "<div class='box row-between'>" +
+          "<label style='flex:1;cursor:pointer'><input type='checkbox' "+(x.fatto?"checked":"")+" data-i='"+i+"'> " +
+          "<b style='"+(x.fatto?"text-decoration:line-through;color:#94a3b8":"")+"'>"+x.titolo+"</b>" +
+          "<div style='font-size:13px;color:#1d4ed8;margin-top:4px;margin-left:20px'>📅 "+x.scadenza_testo+"</div></label>" +
+          "<button class='btn-del' data-del='"+i+"'>Elimina</button>" +
+        "</div>"
+      ).join("")
+      : "<div class='box' style='color:#64748b'>Nessuna scadenza con data precisa salvata.</div>";
+
+    el.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+      cb.onchange=()=>{items[cb.dataset.i].fatto=cb.checked;salvaItems();renderScadList();renderHome()};
+    });
+    el.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.onclick=()=>{
+        if(confirm("Eliminare questa voce?")){
+          items.splice(Number(btn.dataset.del),1);
+          salvaItems();
+          renderScadList();
+          renderHome();
+        }
+      };
+    });
+  }
+
+  function renderArcList(){
+    const el=document.getElementById("listArc");
+    el.innerHTML=items.length
+      ? items.map((x,i)=>
+        "<div class='box row-between'>" +
+          "<div style='flex:1;cursor:pointer' data-open='"+i+"'>" +
+            "<span class='pill' style='font-size:11px'>"+(x.categoria||"Generale")+"</span>" +
+            "<div style='font-weight:700;font-size:15px'>"+x.titolo+"</div>" +
+            "<div style='font-size:13px;color:#64748b;margin-top:3px'>"+(x.in_parole_semplici||"").slice(0,85)+"...</div>" +
+          "</div>" +
+          "<button class='btn-del' data-del='"+i+"'>Elimina</button>" +
+        "</div>"
+      ).join("")
+      : "<div class='box' style='color:#64748b'>Archivio vuoto.</div>";
+
+    el.querySelectorAll("[data-open]").forEach(row=>{
+      row.onclick=()=>{cur=items[Number(row.dataset.open)];renderRes(cur)};
+    });
+    el.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.onclick=()=>{
+        if(confirm("Eliminare questa voce dall'archivio?")){
+          items.splice(Number(btn.dataset.del),1);
+          salvaItems();
+          renderArcList();
+          renderHome();
+        }
+      };
+    });
+  }
+
+  document.getElementById("nHome").onclick=()=>{setTab("nHome");renderHome();openView("v-home")};
+  document.getElementById("nScad").onclick=()=>{setTab("nScad");openView("v-scad");renderScadList()};
+  document.getElementById("nArc").onclick=()=>{setTab("nArc");openView("v-arc");renderArcList()};
+
+  renderHome();
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
