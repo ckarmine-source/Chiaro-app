@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chiaro</title>
-    <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#1d4ed8" />
   <style>
     :root {
@@ -47,7 +47,6 @@
     }
     .hero h1 { font-size: 25px; margin: 12px 0 6px; line-height: 1.2; }
     .hero p { margin: 0; font-size: 14px; color: rgba(255,255,255,0.88); }
-
     .wrap { max-width: 620px; margin: 0 auto; padding: 16px; }
     .action-card {
       width: 100%;
@@ -85,7 +84,6 @@
     .action-card.main .icon-badge { background: rgba(255,255,255,0.2); }
     .action-title { font-size: 16px; font-weight: 700; display: block; }
     .action-sub { font-size: 13px; opacity: 0.85; display: block; margin-top: 2px; }
-
     .sec-head {
       display: flex;
       justify-content: space-between;
@@ -119,7 +117,6 @@
     }
     .pill.alta { background: #fee2e2; color: #b91c1c; }
     .pill.media { background: #fef3c7; color: #b45309; }
-
     textarea {
       width: 100%;
       min-height: 125px;
@@ -133,7 +130,6 @@
       resize: vertical;
     }
     textarea:focus { outline: none; border-color: var(--primary); }
-
     .file-box {
       display: flex;
       flex-direction: column;
@@ -296,14 +292,14 @@
     <p id="inSub" style="margin:0 0 12px;font-size:14px;color:#64748b"></p>
 
     <div id="fotoWrap" class="hidden">
-      <<label class="file-box" for="fotoInput">
-  🖼️ Scegli dalla galleria
-  <input type="file" accept="image/*" id="fotoInput" hidden />
-</label>
-<label class="file-box" for="cameraInput">
-  📷 Scatta una foto
-  <input type="file" accept="image/*" capture="environment" id="cameraInput" hidden />
-</label>
+      <label class="file-box" for="fotoInput">
+        🖼️ Scegli dalla galleria
+        <input type="file" accept="image/*" id="fotoInput" hidden />
+      </label>
+      <label class="file-box" for="cameraInput">
+        📷 Scatta una foto
+        <input type="file" accept="image/*" capture="environment" id="cameraInput" hidden />
+      </label>
       <img id="fotoPrev" style="max-width:100%;max-height:200px;margin:10px auto 0;border-radius:12px;display:none" />
     </div>
 
@@ -316,24 +312,24 @@
     <div id="rBadges"></div>
     <h2 id="rTit" style="margin:4px 0 14px;font-size:22px"></h2>
 
+    <div class="box" style="background:#eff6ff;border-color:#bfdbfe">
+      <div class="lbl">Cosa fare adesso</div>
+      <ul id="rPas" style="line-height:1.55;margin:4px 0 0;padding-left:20px"></ul>
+    </div>
+
     <div class="box">
-      <div class="lbl">1. In parole semplici</div>
+      <div class="lbl">In parole semplici</div>
       <div id="rSem" style="line-height:1.5;margin-top:4px"></div>
     </div>
 
     <div class="box">
-      <div class="lbl">2. Cosa significa per te</div>
+      <div class="lbl">Cosa significa per te</div>
       <div id="rImp" style="line-height:1.5;margin-top:4px"></div>
     </div>
 
     <div id="rScaBox" class="box">
-      <div class="lbl">3. Scadenza e urgenza</div>
+      <div class="lbl">Scadenza</div>
       <div id="rSca" style="font-weight:600;margin-top:4px"></div>
-    </div>
-
-    <div class="box">
-      <div class="lbl">4. Prossimo passo</div>
-      <div id="rPas" style="line-height:1.55;margin-top:4px"></div>
     </div>
 
     <div id="rAzBox" class="box hidden" style="background:#eff6ff;border-color:#bfdbfe">
@@ -343,6 +339,226 @@
     </div>
 
     <button class="btn" id="btnSave">💾 Salva in Archivio</button>
+    <div class="btn-row">
+      <button class="btn btn-sec" id="btnShare">📤 Condividi</button>
+      <button class="btn btn-sec" id="btnDownload">⬇️ Scarica .txt</button>
+    </div>
+  </div>
+
+  <div id="v-scad" class="wrap hidden">
+    <h2 style="margin:4px 0 4px;font-size:22px">Scadenze</h2>
+    <p style="margin:0 0 14px;font-size:13px;color:#64748b">Solo documenti con una data o un termine preciso.</p>
+    <div id="listScad"></div>
+  </div>
+
+  <div id="v-arc" class="wrap hidden">
+    <h2 style="margin:4px 0 4px;font-size:22px">Archivio</h2>
+    <p style="margin:0 0 14px;font-size:13px;color:#64748b">Tutte le analisi e i dubbi salvati sul telefono.</p>
+    <div id="listArc"></div>
+  </div>
+
+  <div class="nav">
+    <button id="nHome" class="on"><span style="font-size:18px">🏠</span>Home</button>
+    <button id="nScad"><span style="font-size:18px">📅</span>Scadenze</button>
+    <button id="nArc"><span style="font-size:18px">🗂️</span>Archivio</button>
+  </div>
+
+<script>
+(function(){
+  const KEY="chiaro_v1", URL="/api/analizza-chiaro";
+  let items=[]; try{items=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){items=[]}
+  let cur=null, b64=null, mime="image/jpeg", modalita="dubbio";
+
+  const showErr=(m)=>{const el=document.getElementById("errBox");el.textContent=m;el.classList.remove("hidden")};
+  const clearErr=()=>document.getElementById("errBox").classList.add("hidden");
+  const views=["v-home","v-input","v-res","v-scad","v-arc"];
+  const openView=(id)=>{clearErr();views.forEach(v=>document.getElementById(v).classList.toggle("hidden",v!==id));window.scrollTo(0,0)};
+  const setTab=(btnId)=>{["nHome","nScad","nArc"].forEach(b=>document.getElementById(b).classList.toggle("on",b===btnId))};
+
+  const haScadenzaReale=(x)=>{
+    if(!x || x.tipo==="dubbio") return false;
+    const s=(x.scadenza_testo?String(x.scadenza_testo):"").trim().toLowerCase();
+    if(!s || s.includes("nessuna scadenza") || s.includes("garanzia legale") || s.includes("data di acquisto")) return false;
+    return /\b(\d{1,2}[\/\-\.]\d{1,2}([\/\-\.]\d{2,4})?|\d{1,2}\s+(gen|feb|mar|apr|mag|giu|lug|ago|set|ott|nov|dic)[a-z]*|\d+\s+giorn[oi]|entro\s+il)\b/i.test(s);
+  };
+
+  const salvaItems=()=>{ localStorage.setItem(KEY,JSON.stringify(items)); };
+
+  const formattaDocumentoTesto=(d)=>{
+    if(!d) return "";
+    const passi=Array.isArray(d.prossimo_passo)&&d.prossimo_passo.length
+      ? d.prossimo_passo.map(p=>"- "+p).join("\n")
+      : "- Nessun passo indicato";
+    const righe=[
+      "CHIARO — RIEPILOGO",
+      "Titolo: "+(d.titolo||"Chiarimento"),
+      "Categoria: "+(d.categoria||"Generale"),
+      haScadenzaReale(d) ? "Scadenza: "+d.scadenza_testo : null,
+      "",
+      "1. IN PAROLE SEMPLICI",
+      d.in_parole_semplici||"",
+      "",
+      "2. COSA SIGNIFICA PER TE",
+      d.cosa_significa_per_te||"",
+      "",
+      "3. PROSSIMO PASSO",
+      passi
+    ].filter(x=>x!==null);
+
+    const az=d.azione_pronta&&d.azione_pronta.testo_copiabile;
+    if(az){
+      righe.push("", "4. BOZZA / AZIONE PRONTA", az);
+    }
+    return righe.join("\n");
+  };
+
+  const nomeFilePulito=(titolo)=>{
+    const base=(titolo||"chiaro-bozza").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    return (base||"chiaro-bozza")+".txt";
+  };
+
+  const renderHome=()=>{
+    const sc=items.filter(x=>!x.fatto && haScadenzaReale(x));
+    document.getElementById("homeScad").innerHTML=sc.length
+      ? sc.slice(0,3).map(x=>"<div style='padding:4px 0;border-bottom:1px solid #f1f5f9'><b>"+x.titolo+"</b><div style='font-size:13px;color:#1d4ed8;font-weight:600'>📅 "+x.scadenza_testo+"</div></div>").join("")
+      : "Nessuna scadenza con data attiva.";
+  };
+
+  document.getElementById("goDoc").onclick=()=>{
+    modalita="documento"; b64=null;
+    document.getElementById("fotoInput").value="";
+    document.getElementById("cameraInput").value="";
+    document.getElementById("fotoPrev").style.display="none";
+    document.getElementById("inTxt").value="";
+    document.getElementById("inTxt").placeholder="Facoltativo: aggiungi una domanda o incolla il testo del documento...";
+    document.getElementById("fotoWrap").classList.remove("hidden");
+    document.getElementById("inTitle").textContent="Analizza documento";
+    document.getElementById("inSub").textContent="Carica una foto chiara o incolla il testo ricevuto.";
+    openView("v-input");
+  };
+
+  document.getElementById("goDubbio").onclick=()=>{
+    modalita="dubbio"; b64=null;
+    document.getElementById("inTxt").value="";
+    document.getElementById("inTxt").placeholder="Es. Ho ricevuto un addebito strano, come posso chiedere il rimborso?";
+    document.getElementById("fotoWrap").classList.add("hidden");
+    document.getElementById("inTitle").textContent="Chiedi un dubbio";
+    document.getElementById("inSub").textContent="Ti rispondo in modo semplice e pratico.";
+    openView("v-input");
+  };
+
+  document.getElementById("back1").onclick=()=>{openView("v-home");setTab("nHome");renderHome()};
+  document.getElementById("back2").onclick=()=>{openView("v-home");setTab("nHome");renderHome()};
+
+  document.getElementById("fotoInput").onchange =
+  document.getElementById("cameraInput").onchange = (e) => {
+    const f=e.target.files&&e.target.files[0]; if(!f)return; mime=f.type||"image/jpeg";
+    const r=new FileReader();
+    r.onload=()=>{const res=String(r.result||""); b64=res.split(",")[1]||null; const img=document.getElementById("fotoPrev"); img.src=res; img.style.display="block"};
+    r.readAsDataURL(f);
+  };
+
+  document.getElementById("btnRun").onclick=async()=>{
+    const testo=document.getElementById("inTxt").value.trim();
+    if(!testo&&!b64){showErr("Scrivi un dubbio o scegli una foto prima di continuare.");return}
+    const btn=document.getElementById("btnRun");
+    btn.disabled=true;
+    btn.innerHTML="<span class='loader'></span>Sto analizzando...";
+    clearErr();
+    try{
+      const payload=JSON.stringify({testo,immagineBase64:b64,mimeType:mime});
+      let r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+      let d=await r.json().catch(()=>null);
+      if(r.status===503){
+        btn.innerHTML="<span class='loader'></span>Server occupato, riprovo...";
+        await new Promise(res=>setTimeout(res,900));
+        r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+        d=await r.json().catch(()=>null);
+      }
+      if (r.status === 429) {
+        showErr(/per day|giornalier/i.test(d?.error || "")
+          ? "Limite giornaliero raggiunto. Riprova dopo il rinnovo della quota."
+          : "Troppe richieste al momento. Attendi un po’ prima di riprovare.");
+        return;
+      }
+      if (r.status === 503) {
+        showErr("Il servizio di analisi è momentaneamente occupato. Riprova tra qualche minuto.");
+        return;
+      }
+      if (r.status === 413) {
+        showErr("La foto è troppo grande. Scegli una foto più piccola o incolla il testo.");
+        return;
+      }
+      if (!r.ok || !d || d.error || !d.in_parole_semplici) {
+        showErr("Analisi non disponibile. Riprova tra qualche minuto.");
+        return;
+      }
+      cur={id:String(Date.now()),tipo:modalita,fatto:false,...d};
+      renderRes(cur);
+    }catch{
+      showErr("Impossibile raggiungere il servizio di analisi. Controlla la connessione e riprova.");
+    }finally{
+      btn.disabled=false;
+      btn.textContent="Spiegamelo in parole semplici";
+    }
+  };
+
+  function renderRes(d){
+    openView("v-res");
+    const urg=(d.urgenza||"Nessuna").toLowerCase();
+    const urgCls=urg==="alta"?"alta":(urg==="media"?"media":"");
+    document.getElementById("rBadges").innerHTML=
+      "<span class='pill'>"+(d.categoria||"Generale")+"</span> "+
+      (d.tipo!=="dubbio"?"<span class='pill "+urgCls+"'>Urgenza: "+(d.urgenza||"Nessuna")+"</span>":"");
+    document.getElementById("rTit").textContent=d.titolo||"Chiarimento";
+    document.getElementById("rSem").textContent=d.in_parole_semplici||"";
+    document.getElementById("rImp").textContent=d.cosa_significa_per_te||"";
+
+    const mostraScad=haScadenzaReale(d);
+    document.getElementById("rScaBox").classList.toggle("hidden",!mostraScad);
+    if(mostraScad) document.getElementById("rSca").textContent=d.scadenza_testo;
+
+    const passi=Array.isArray(d.prossimo_passo)?d.prossimo_passo:[];
+    const elenco = document.getElementById("rPas");
+    elenco.parentElement.classList.toggle("hidden", !passi.length);
+    elenco.replaceChildren(...passi.map(passo => {
+      const voce = document.createElement("li");
+      voce.textContent = passo;
+      return voce;
+    }));
+    const az=d.azione_pronta&&d.azione_pronta.testo_copiabile;
+    document.getElementById("rAzBox").classList.toggle("hidden",!az);
+    if(az)document.getElementById("rAzTxt").textContent=d.azione_pronta.testo_copiabile;
+  }
+
+  document.getElementById("btnCopy").onclick=async()=>{
+    const txt=document.getElementById("rAzTxt").textContent;
+    try{await navigator.clipboard.writeText(txt);alert("Bozza copiata!")}catch(e){alert("Seleziona e copia il testo dal riquadro.")}
+  };
+
+  document.getElementById("btnShare").onclick=async()=>{
+    if(!cur) return;
+    const testoCondiviso=formattaDocumentoTesto(cur);
+    if(navigator.share){
+      try{
+        await navigator.share({title:cur.titolo||"Chiaro",text:testoCondiviso});
+        return;
+      }catch(e){
+        if(e && e.name==="AbortError") return;
+      }
+    }
+    try{
+      await navigator.clipboard.writeText(testoCondiviso);
+      alert("Riepilogo copiato negli appunti: puoi incollarlo dove vuoi.");
+    }catch(e){
+      alert("Condivisione non supportata su questo browser.");
+    }
+  };
+
+  document.getElementById("btnDownload").onclick=()=>{
+    if(!cur) return;
+    const blob=new Blob([formattaDocumentoTesto(cur)],{type:"text/plain;charset=utf-8"});
+    const a  <button class="btn" id="btnSave">💾 Salva in Archivio</button>
     <div class="btn-row">
       <button class="btn btn-sec" id="btnShare">📤 Condividi</button>
       <button class="btn btn-sec" id="btnDownload">⬇️ Scarica .txt</button>
