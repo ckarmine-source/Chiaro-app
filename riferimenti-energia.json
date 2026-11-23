@@ -1,0 +1,7 @@
+{
+  "istruzioni": "Aggiorna una volta al mese. Vai su ilportaleofferte.it, cerca per un cliente domestico residente (luce: 2.700 kWh/anno, 3 kW; gas: 1.400 Smc/anno, la tua provincia) e copia qui la migliore offerta a prezzo fisso: prezzo dell'energia (€/kWh o €/Smc, senza imposte) e quota fissa di vendita in €/mese. Lascia null per disattivare il confronto.",
+  "aggiornato": null,
+  "fonte": "ilportaleofferte.it (ARERA)",
+  "luce": { "nome": "", "prezzo": null, "quota_fissa_mese": null },
+  "gas": { "nome": "", "prezzo": null, "quota_fissa_mese": null }
+}
