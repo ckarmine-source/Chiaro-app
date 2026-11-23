@@ -64,6 +64,9 @@
     .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .field label { font-size: 14px; font-weight: 700; }
     .file-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .file-box.wide { grid-column: 1 / -1; min-height: 56px; }
+    .pdf-tile { width: 72px; height: 96px; border-radius: 10px; border: 1px solid var(--border); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; color: var(--muted); padding: 4px; text-align: center; overflow: hidden; word-break: break-all; }
+    .pdf-tile b { font-size: 15px; color: #b91c1c; }
     .file-box { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #93c5fd; background: var(--soft-blue); border-radius: 14px; padding: 14px 8px; text-align: center; cursor: pointer; font-weight: 700; color: var(--primary-dark); min-height: 72px; }
     .vh { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
@@ -151,12 +154,14 @@
       <div class="file-row">
         <label class="file-box" for="cameraInput">📷 Scatta una foto</label>
         <label class="file-box" for="fotoInput">🖼️ Scegli dalla galleria</label>
+        <label class="file-box wide" for="fileInput">📎 Scegli un PDF o un file dal telefono</label>
       </div>
       <input type="file" accept="image/*" capture="environment" id="cameraInput" class="vh" />
       <input type="file" accept="image/*" multiple id="fotoInput" class="vh" />
+      <input type="file" accept="application/pdf,.pdf,image/*" multiple id="fileInput" class="vh" />
       <div class="thumbs" id="thumbs"></div>
       <button class="btn-link hidden" id="clearFoto">Rimuovi le foto</button>
-      <p class="note">Più pagine? Scatta una foto per pagina, una dopo l’altra (massimo 5).</p>
+      <p class="note">Più pagine? Scatta una foto per pagina, una dopo l’altra (massimo 5 file). I PDF possono avere più pagine, fino a circa 2,8 MB.</p>
     </div>
 
     <textarea id="inTxt" placeholder="Scrivi qui il tuo dubbio o incolla il testo..."></textarea>
@@ -307,20 +312,32 @@
       img.src = url;
     });
   }
+  const MAX_BASE64 = 3900000; // circa 2,8 MB di file: sotto il limite del server
+  const isPdf = (f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+  const leggiBase64 = (f) => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1] || ""); r.onerror = ko; r.readAsDataURL(f); });
   async function aggiungiFoto(files) {
-    const lista = Array.from(files || []).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+    const lista = Array.from(files || []).filter(f => isPdf(f) || /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+    if (files && files.length && !lista.length) showErr("Questo tipo di file non si può leggere: scegli un PDF o una foto.");
     for (const f of lista) {
-      if (foto.length >= MAX_FOTO) { toast("Massimo " + MAX_FOTO + " foto per documento"); break; }
-      try { foto.push(await riduci(f)); } catch (e) { showErr("Non riesco ad aprire una delle foto. Prova a scattarla di nuovo."); }
+      if (foto.length >= MAX_FOTO) { toast("Massimo " + MAX_FOTO + " file per documento"); break; }
+      try {
+        const nuovo = isPdf(f) ? { pdf: true, nome: f.name, data: await leggiBase64(f), mimeType: "application/pdf" } : await riduci(f);
+        const totale = foto.reduce((s, x) => s + x.data.length, 0) + nuovo.data.length;
+        if (totale > MAX_BASE64) { showErr(isPdf(f) ? "Il PDF è troppo grande (massimo circa 2,8 MB). Prova a fotografare le pagine che ti interessano." : "Troppi file insieme: togline qualcuno."); continue; }
+        foto.push(nuovo);
+      } catch (e) { showErr("Non riesco ad aprire uno dei file. Riprova."); }
     }
     renderThumbs();
   }
   function renderThumbs() {
-    $("thumbs").replaceChildren(...foto.map((f, i) => h("img", { src: f.anteprima, alt: "Pagina " + (i + 1) })));
+    $("thumbs").replaceChildren(...foto.map((f, i) => f.pdf
+      ? h("div", { class: "pdf-tile", title: f.nome }, h("b", null, "PDF"), f.nome.length > 22 ? f.nome.slice(0, 20) + "…" : f.nome)
+      : h("img", { src: f.anteprima, alt: "Pagina " + (i + 1) })));
     $("clearFoto").classList.toggle("hidden", !foto.length);
   }
   $("cameraInput").onchange = (e) => { aggiungiFoto(e.target.files); e.target.value = ""; };
   $("fotoInput").onchange = (e) => { aggiungiFoto(e.target.files); e.target.value = ""; };
+  $("fileInput").onchange = (e) => { aggiungiFoto(e.target.files); e.target.value = ""; };
   $("clearFoto").onclick = () => { foto = []; renderThumbs(); };
 
   $("goDoc").onclick = () => {
@@ -359,7 +376,7 @@
       }
       if (r.status === 429) { showErr(/per day|giornalier/i.test(d?.error || "") ? "Limite giornaliero raggiunto. Riprova domani." : "Troppe richieste al momento. Attendi qualche minuto prima di riprovare."); return; }
       if (r.status === 503) { showErr("Il servizio di analisi è momentaneamente occupato. Riprova tra qualche minuto."); return; }
-      if (r.status === 413) { showErr("Le foto sono troppo grandi. Usa meno pagine o incolla il testo."); return; }
+      if (r.status === 413) { showErr("I file sono troppo grandi. Usa meno pagine o incolla il testo."); return; }
       if (!r.ok || !d || d.error || !d.in_parole_semplici) { showErr(d?.error && r.status < 500 ? d.error : "Analisi non disponibile. Riprova tra qualche minuto."); return; }
       cur = { id: String(Date.now()), tipo: modalita, fatto: false, lingua: $("lingua").value, ricezione: "", ...d };
       renderRes(cur);

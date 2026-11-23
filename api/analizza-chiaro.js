@@ -8,7 +8,7 @@ const MODELLO_DEFAULT = "gemini-3.5-flash-lite";
 const MAX_FOTO = 5;
 const MAX_BASE64_TOTALE = 4_000_000;          // ~3 MB di immagini: sotto il limite di 4,5 MB di Vercel
 const MAX_TESTO = 8000;
-const TIPI_IMMAGINE = ["image/jpeg", "image/png", "image/webp"];
+const TIPI_IMMAGINE = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const LIMITE_RICHIESTE = 20;                  // per indirizzo IP...
 const FINESTRA_MS = 10 * 60 * 1000;           // ...ogni 10 minuti
 
@@ -138,7 +138,7 @@ function leggiImmagini(body) {
     const mime = TIPI_IMMAGINE.includes(im?.mimeType) ? im.mimeType : "image/jpeg";
     if (!data || !/^[A-Za-z0-9+/=]+$/.test(data.slice(0, 200))) throw { status: 400, error: "Foto non valida." };
     totale += data.length;
-    if (totale > MAX_BASE64_TOTALE) throw { status: 413, error: "Foto troppo grandi." };
+    if (totale > MAX_BASE64_TOTALE) throw { status: 413, error: "File troppo grandi." };
     return { inline_data: { mime_type: mime, data } };
   });
 }
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
 
     const parts = [...immagini, {
       text: immagini.length
-        ? `Le immagini sono le pagine di UN documento, in ordine.${testo ? "\nDomanda o testo aggiunto dalla persona:\n" + testo : "\nSpiegalo in modo diretto e pratico."}`
+        ? `Le immagini e i PDF allegati sono le pagine di UN documento, in ordine.${testo ? "\nDomanda o testo aggiunto dalla persona:\n" + testo : "\nSpiegalo in modo diretto e pratico."}`
         : "Dubbio o testo della persona:\n" + testo,
     }];
 
