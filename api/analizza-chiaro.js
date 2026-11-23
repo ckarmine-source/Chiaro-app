@@ -63,9 +63,26 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
  "professionista": {"serve": true/false, "chi": "CAF, patronato, avvocato, medico...", "perche": "motivo"},
  "nota_salute": "solo per referti e farmaci, altrimenti stringa vuota",
  "dati_mancanti": ["parti illeggibili o informazioni che servirebbero"],
- "azione_pronta": {"titolo_azione":"titolo breve","testo_copiabile":"lettera, email o reclamo pronto con segnaposto [NOME], indicando all'inizio a chi inviarlo e come (PEC, raccomandata, modulo online)"}
+ "azione_pronta": {"titolo_azione":"titolo breve","testo_copiabile":"lettera, email o reclamo pronto con segnaposto [NOME], indicando all'inizio a chi inviarlo e come (PEC, raccomandata, modulo online)"},
+ "bolletta": null oppure, SOLO per bollette di luce o gas, {
+   "servizio":"luce|gas","fornitore":"nome","offerta":"nome dell'offerta",
+   "periodo_da":"AAAA-MM-GG","periodo_a":"AAAA-MM-GG",
+   "consumo_periodo": numero (kWh per la luce, Smc per il gas, consumo FATTURATO nel periodo),
+   "consumo_annuo": numero o null (il "consumo annuo" indicato in bolletta),
+   "totale": numero (totale da pagare della bolletta, IVA inclusa),
+   "prezzo_materia": numero o null (prezzo unitario della sola componente energia/materia prima in €/kWh o €/Smc, SENZA rete, oneri e imposte; se ci sono più fasce usa la media),
+   "tipo_prezzo":"fisso|variabile|tutela|non_chiaro",
+   "spread": numero o null (per le offerte variabili, la maggiorazione sul PUN o PSV in €/kWh o €/Smc),
+   "quota_fissa_mese": numero o null (quota fissa di vendita/commercializzazione in € al mese; se è annua dividi per 12),
+   "potenza_kw": numero o null (potenza impegnata, solo luce),
+   "fasce": {"F1":percentuale,"F2":percentuale,"F3":percentuale} o null,
+   "fine_prezzo_bloccato":"AAAA-MM-GG o null",
+   "bonus_sociale": true se applicato,
+   "bollette_precedenti": [{"periodo_da":"AAAA-MM-GG","periodo_a":"AAAA-MM-GG","consumo_periodo":numero,"totale":numero,"prezzo_materia":numero o null}] (se tra i file ci sono più bollette dello stesso servizio, metti qui le più vecchie e usa la più recente per i campi sopra; altrimenti lista vuota),
+   "soluzioni":["consigli concreti per spendere meno basati su QUESTI numeri: offerta e prezzo, potenza impegnata, fasce orarie, scadenza del prezzo bloccato, bonus sociale, consumi anomali, rateizzazione"]
+ }
 }
-Se non serve scrivere a nessuno imposta "azione_pronta": null. Liste vuote se non pertinenti.`;
+Se non serve scrivere a nessuno imposta "azione_pronta": null. Se non è una bolletta di luce o gas imposta "bolletta": null. Liste vuote se non pertinenti. Nei numeri usa il punto decimale.`;
 
 /* ---------- normalizzazione della risposta del modello ---------- */
 const s = (v, max = 2000) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -106,10 +123,38 @@ export function normalizza(j) {
       ? { titolo_azione: s(j.azione_pronta.titolo_azione, 200) || "Bozza pronta", testo_copiabile: s(j.azione_pronta.testo_copiabile, 6000) }
       : null,
   };
+  out.bolletta = normalizzaBolletta(j?.bolletta);
   // compatibilità con le versioni precedenti dell'app (archivio e scadenze)
   const prima = out.scadenze.find((x) => x.data) || out.scadenze[0];
   out.scadenza_testo = prima ? `${prima.cosa}${prima.data ? " entro il " + prima.data.split("-").reverse().join("/") : prima.giorni_da_ricezione ? ` entro ${prima.giorni_da_ricezione} giorni dalla ricezione` : ""}` : "Nessuna scadenza fissa";
   return out;
+}
+
+const dataIso = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v : null);
+const pos = (v) => { const n = num(v); return n != null && n > 0 ? n : null; };
+export function normalizzaBolletta(b) {
+  if (!b || typeof b !== "object") return null;
+  const servizio = scegli(b.servizio, ["luce", "gas"], null);
+  if (!servizio) return null;
+  let prezzo = pos(b.prezzo_materia);
+  if (prezzo != null && prezzo > (servizio === "luce" ? 2 : 5)) prezzo = null;         // quasi certamente non è un prezzo unitario
+  let quota = pos(b.quota_fissa_mese);
+  if (quota != null && quota > 60) quota = Math.round((quota / 12) * 100) / 100;        // indicata all'anno
+  const fasce = b.fasce && typeof b.fasce === "object" ? { F1: num(b.fasce.F1), F2: num(b.fasce.F2), F3: num(b.fasce.F3) } : null;
+  return {
+    servizio, unita: servizio === "luce" ? "kWh" : "Smc",
+    fornitore: s(b.fornitore, 120), offerta: s(b.offerta, 160),
+    periodo_da: dataIso(b.periodo_da), periodo_a: dataIso(b.periodo_a),
+    consumo_periodo: pos(b.consumo_periodo), consumo_annuo: pos(b.consumo_annuo), totale: pos(b.totale),
+    prezzo_materia: prezzo, tipo_prezzo: scegli(b.tipo_prezzo, ["fisso", "variabile", "tutela", "non_chiaro"], "non_chiaro"),
+    spread: num(b.spread), quota_fissa_mese: quota, potenza_kw: pos(b.potenza_kw),
+    fasce: fasce && (fasce.F1 != null || fasce.F2 != null || fasce.F3 != null) ? fasce : null,
+    fine_prezzo_bloccato: dataIso(b.fine_prezzo_bloccato), bonus_sociale: !!b.bonus_sociale,
+    bollette_precedenti: arr(b.bollette_precedenti).slice(0, 6).map((p) => ({
+      periodo_da: dataIso(p?.periodo_da), periodo_a: dataIso(p?.periodo_a), consumo_periodo: pos(p?.consumo_periodo), totale: pos(p?.totale), prezzo_materia: pos(p?.prezzo_materia),
+    })).filter((p) => p.consumo_periodo && p.totale),
+    soluzioni: arr(b.soluzioni).map((x) => s(x, 400)).filter(Boolean).slice(0, 6),
+  };
 }
 
 /* ---------- protezioni ---------- */

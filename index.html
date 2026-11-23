@@ -222,6 +222,8 @@
   const MAX_FOTO = 5, LATO_MAX = 1600;
   let items = []; try { items = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { items = []; }
   let cur = null, foto = [], modalita = "dubbio";
+  let RIF = null; // offerte di riferimento per luce e gas (riferimenti-energia.json)
+  fetch("/riferimenti-energia.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { RIF = j; }).catch(() => {});
   const $ = (id) => document.getElementById(id);
 
   /* crea elementi senza mai interpretare il testo come HTML */
@@ -267,6 +269,53 @@
   }
   const prossima = (x) => scadenzeDi(x).filter(s => s.giorni != null && s.giorni >= 0).sort((a, b) => a.giorni - b.giorni)[0] || null;
   const haScadenza = (x) => scadenzeDi(x).length > 0;
+
+  /* ---------- bollette: calcoli fatti dall'app, non dal modello ---------- */
+  const giorniTra = (a, b) => (a && b ? Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 864e5) + 1 : null);
+  const num2 = (n, dec) => Number(n).toLocaleString("it-IT", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const art = (n) => (/^(8|11|18|8\d|8\d\d)$/.test(String(n)) ? "l’" : "il "); // "l’11%", "il 12%"
+  function analisiBolletta(d, tutte, rif) {
+    const b = d && d.bolletta;
+    if (!b || !b.consumo_periodo || !b.totale) return null;
+    const gg = giorniTra(b.periodo_da, b.periodo_a);
+    const annuo = b.consumo_annuo || (gg && gg >= 20 ? b.consumo_periodo / gg * 365 : null);
+    const costoUnit = b.totale / b.consumo_periodo;
+    const out = { b, gg, annuo, costoUnit, spesaAnnua: annuo ? costoUnit * annuo : null };
+    // parte che cambia da un fornitore all'altro: energia + quota fissa di vendita (rete, oneri e imposte sono uguali per tutti)
+    if (annuo && b.prezzo_materia != null && b.quota_fissa_mese != null) out.vendita = b.prezzo_materia * annuo + b.quota_fissa_mese * 12;
+    const r = rif && rif[b.servizio];
+    if (out.vendita != null && r && Number(r.prezzo) > 0 && r.quota_fissa_mese != null) {
+      out.migliore = Number(r.prezzo) * annuo + Number(r.quota_fissa_mese) * 12;
+      out.risparmio = out.vendita - out.migliore;
+      out.rif = { nome: r.nome, aggiornato: rif.aggiornato };
+    }
+    // bolletta precedente: nella stessa analisi, altrimenti in archivio
+    let prec = (b.bollette_precedenti || []).filter(p => p.consumo_periodo && p.totale).sort((x, y) => String(y.periodo_a).localeCompare(String(x.periodo_a)))[0];
+    if (prec) prec = { ...prec, fonte: "caricata insieme" };
+    else {
+      const prima = (tutte || []).filter(x => x !== d && x.id !== d.id && x.bolletta && x.bolletta.servizio === b.servizio && x.bolletta.consumo_periodo && x.bolletta.totale && x.bolletta.periodo_a && b.periodo_da && x.bolletta.periodo_a < b.periodo_da)
+        .sort((x, y) => y.bolletta.periodo_a.localeCompare(x.bolletta.periodo_a))[0];
+      if (prima) prec = { ...prima.bolletta, fonte: "dall'archivio" };
+    }
+    if (prec) {
+      const ggP = giorniTra(prec.periodo_da, prec.periodo_a);
+      out.prec = prec;
+      out.varPrezzo = (costoUnit - prec.totale / prec.consumo_periodo) / (prec.totale / prec.consumo_periodo);
+      if (gg && ggP) out.varConsumo = (b.consumo_periodo / gg - prec.consumo_periodo / ggP) / (prec.consumo_periodo / ggP);
+    }
+    if (b.fine_prezzo_bloccato) out.giorniPrezzo = giorniA(b.fine_prezzo_bloccato);
+    // consigli calcolati
+    const u = b.unita, c = [];
+    if (out.risparmio != null && out.risparmio >= 30) c.push("Cambiando offerta risparmieresti circa " + eur(Math.round(out.risparmio)) + " l’anno (più IVA). Il cambio è gratuito, senza interruzioni, e basta il codice " + (b.servizio === "luce" ? "POD" : "PDR") + " della bolletta.");
+    else if (out.risparmio != null) c.push("La tua offerta è vicina alle migliori sul mercato: cambiare ora ti farebbe risparmiare poco.");
+    else if (annuo) c.push("Confronta gratis su ilportaleofferte.it (sito di ARERA) inserendo il tuo consumo annuo di " + num2(Math.round(annuo), 0) + " " + u + (b.potenza_kw ? " e la potenza di " + num2(b.potenza_kw, 1) + " kW" : "") + ".");
+    if (out.giorniPrezzo != null && out.giorniPrezzo >= 0 && out.giorniPrezzo <= 90) c.push("Il tuo prezzo bloccato finisce tra " + out.giorniPrezzo + " giorni: dopo può aumentare. È il momento giusto per confrontare le offerte.");
+    if (out.varPrezzo != null && out.varPrezzo >= 0.1) c.push("Ogni " + u + " ti costa " + art(Math.round(out.varPrezzo * 100)) + Math.round(out.varPrezzo * 100) + "% in più rispetto alla bolletta precedente: controlla se il prezzo è cambiato o se ci sono conguagli.");
+    if (out.varConsumo != null && out.varConsumo >= 0.2) c.push("Consumi in media " + art(Math.round(out.varConsumo * 100)) + Math.round(out.varConsumo * 100) + "% in più al giorno rispetto alla bolletta precedente" + (b.servizio === "gas" ? " (normale se è iniziato il riscaldamento)" : "") + ".");
+    if (b.tipo_prezzo === "variabile") c.push("Hai un prezzo variabile: segue il mercato all’ingrosso, quindi la spesa può salire o scendere da un mese all’altro.");
+    out.consigli = c.concat(b.soluzioni || []);
+    return out;
+  }
 
   /* ---------- testo per condividere / scaricare ---------- */
   const formattaDocumentoTesto = (d) => {
@@ -398,7 +447,7 @@
       h("div", null, h("span", { class: "pill" }, d.categoria || "Generale"), " ",
         d.tipo !== "dubbio" ? h("span", { class: "pill " + (urg === "alta" ? "alta" : urg === "media" ? "media" : "") }, "Urgenza: " + (d.urgenza || "Nessuna")) : null),
       h("h2", { style: "margin:4px 0 4px;font-size:22px" }, d.titolo || "Chiarimento"),
-      d.mittente ? h("p", { style: "margin:0 0 12px;color:#64748b;font-size:14px" }, d.mittente) : null
+      d.mittente ? h("p", { style: "margin:0 0 12px;color:#64748b;font-size:14px" }, d.mittente) : ""
     );
     if (d.nota_salute) body.append(h("div", { class: "box blue", style: "font-weight:700" }, "🩺 " + d.nota_salute));
 
@@ -422,6 +471,30 @@
       body.append(box);
     } else if (haScadenzaTestuale(d)) {
       body.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Scadenza"), h("div", { style: "font-weight:600;margin-top:4px" }, d.scadenza_testo)));
+    }
+
+    // bolletta: la tua spesa e i confronti
+    const ab = analisiBolletta(d, items, RIF);
+    if (ab) {
+      const b = ab.b, u = b.unita;
+      const riga = (k, v, nota) => h("div", { class: "row-between", style: "padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:14px" }, h("span", null, k, nota ? h("div", { class: "cert" }, nota) : null), h("b", { style: "white-space:nowrap" }, v));
+      const box = h("div", { class: "box" }, h("div", { class: "lbl" }, "La tua spesa " + (b.servizio === "luce" ? "per la luce" : "per il gas")),
+        b.fornitore || b.offerta ? h("div", { style: "font-size:14px;color:#64748b;margin:2px 0 6px" }, [b.fornitore, b.offerta].filter(Boolean).join(" · ") + (b.tipo_prezzo !== "non_chiaro" ? " · prezzo " + b.tipo_prezzo : "")) : null,
+        riga("Costo reale per " + u, num2(ab.costoUnit, 3) + " €/" + u, "tutto compreso: energia, rete, oneri e imposte"),
+        ab.spesaAnnua ? riga("Spesa annua stimata", eur(Math.round(ab.spesaAnnua)), "su " + num2(Math.round(ab.annuo), 0) + " " + u + " l’anno") : null,
+        b.prezzo_materia != null ? riga("Prezzo dell’energia", num2(b.prezzo_materia, 4) + " €/" + u) : null,
+        b.quota_fissa_mese != null ? riga("Quota fissa di vendita", eur(b.quota_fissa_mese) + "/mese") : null,
+        b.potenza_kw ? riga("Potenza impegnata", num2(b.potenza_kw, 1) + " kW") : null);
+      if (ab.prec) box.append(h("div", { style: "margin-top:10px;font-size:14px" }, h("b", null, "Rispetto alla bolletta precedente"), " (" + ab.prec.fonte + ")",
+        h("ul", { class: "list" },
+          h("li", null, "Costo per " + u + ": " + (ab.varPrezzo >= 0 ? "+" : "") + Math.round(ab.varPrezzo * 100) + "%"),
+          ab.varConsumo != null ? h("li", null, "Consumo medio al giorno: " + (ab.varConsumo >= 0 ? "+" : "") + Math.round(ab.varConsumo * 100) + "%") : null)));
+      if (ab.risparmio != null) box.append(h("div", { class: "save", style: "margin-top:10px" },
+        ab.risparmio >= 30 ? [h("b", null, "Cambiando offerta"), h("div", { class: "amt" }, "Risparmi circa " + eur(Math.round(ab.risparmio)) + " l’anno + IVA")] : h("b", null, "La tua offerta è già tra le più convenienti"),
+        h("div", { class: "cert" }, "Confronto con " + (ab.rif.nome || "la migliore offerta a prezzo fisso") + (ab.rif.aggiornato ? ", rilevata il " + ab.rif.aggiornato : "") + ", su energia e quota fissa.")));
+      if (ab.consigli.length) box.append(h("div", { style: "margin-top:10px" }, h("b", { style: "font-size:14px" }, "Come spendere meno"), h("ul", { class: "list", style: "font-size:14px" }, ab.consigli.map(t => h("li", null, t)))));
+      box.append(h("p", { class: "note" }, "Stime calcolate dall’app sui dati letti in bolletta: controllale sul foglio. Se la bolletta contiene conguagli, il costo medio può risultare falsato. Salva le bollette in archivio per confrontarle nel tempo."));
+      body.append(box);
     }
 
     // soldi
@@ -583,7 +656,7 @@
   $("nArc").onclick = () => { setTab("nArc"); openView("v-arc"); renderArcList(); };
 
   renderHome();
-  window.__chiaro = { calcolaSpetta, scadenzeDi, formattaDocumentoTesto };
+  window.__chiaro = { calcolaSpetta, scadenzeDi, formattaDocumentoTesto, analisiBolletta };
 })();
 </script>
 <script>
