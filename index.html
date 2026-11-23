@@ -317,6 +317,17 @@
       <ul id="rPas" style="line-height:1.55;margin:4px 0 0;padding-left:20px"></ul>
     </div>
 
+    <form id="followForm" class="box hidden">
+      <label class="lbl" for="followQuestion">Chiedi ancora su questo documento</label>
+      <div class="btn-row">
+        <button class="btn btn-sec" type="button" data-question="Dove c’è scritto cosa devo fare?">Dove c’è scritto?</button>
+        <button class="btn btn-sec" type="button" data-question="Quali informazioni mi mancano per procedere?">Cosa mi manca?</button>
+      </div>
+      <textarea id="followQuestion" required maxlength="1000" placeholder="Scrivi una domanda sul documento"></textarea>
+      <button class="btn" id="followSend" type="submit">Chiedi a Chiaro</button>
+      <div id="followAnswer" role="status" style="white-space:pre-wrap;margin-top:10px"></div>
+    </form>
+
     <div class="box">
       <div class="lbl">In parole semplici</div>
       <div id="rSem" style="line-height:1.5;margin-top:4px"></div>
@@ -458,6 +469,63 @@
     r.readAsDataURL(f);
   };
 
+  // La fonte originale resta in memoria fino a una nuova analisi.
+  let followSource = null;
+  const followForm = document.getElementById("followForm");
+  const followQuestion = document.getElementById("followQuestion");
+  const followSend = document.getElementById("followSend");
+  const followAnswer = document.getElementById("followAnswer");
+
+  followForm.querySelectorAll("[data-question]").forEach(button => {
+    button.onclick = () => {
+      followQuestion.value = button.dataset.question;
+      followQuestion.focus();
+    };
+  });
+
+  followForm.onsubmit = async event => {
+    event.preventDefault();
+    const source = followSource;
+    const question = followQuestion.value.trim();
+    if (!source || cur?.id !== source.id || !question || followSend.disabled) return;
+
+    followSend.disabled = true;
+    followAnswer.textContent = "Sto cercando la risposta…";
+    try {
+      const testo = [
+        "Rispondi alla domanda seguente nel campo in_parole_semplici. Usa la foto o il testo originale come fonte. Se un dettaglio non è leggibile o manca, dillo. Per le citazioni usa solo parole visibili nel documento.",
+        "Domanda: " + question,
+        source.testo && "Testo originale:\n" + source.testo
+      ].filter(Boolean).join("\n\n");
+
+      const response = await fetch(URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({testo, immagineBase64: source.immagineBase64, mimeType: source.mimeType})
+      });
+      const data = await response.json().catch(() => null);
+      if (followSource !== source || cur?.id !== source.id) return;
+
+      if (response.status === 429) {
+        followAnswer.textContent = /per day|giornalier/i.test(data?.error || "")
+          ? "Limite giornaliero raggiunto. Riprova dopo il rinnovo della quota."
+          : "Troppe richieste al momento. Attendi un po’ prima di riprovare.";
+      } else if (response.status === 503) {
+        followAnswer.textContent = "Il servizio è occupato. Riprova tra qualche minuto.";
+      } else if (!response.ok || typeof data?.in_parole_semplici !== "string" || !data.in_parole_semplici.trim()) {
+        followAnswer.textContent = "Risposta non disponibile. Riprova tra qualche minuto.";
+      } else {
+        followAnswer.textContent = data.in_parole_semplici;
+      }
+    } catch {
+      if (followSource === source && cur?.id === source.id) {
+        followAnswer.textContent = "Controlla la connessione e riprova.";
+      }
+    } finally {
+      followSend.disabled = false;
+    }
+  };
+
   document.getElementById("btnRun").onclick=async()=>{
     const testo=document.getElementById("inTxt").value.trim();
     if(!testo&&!b64){showErr("Scrivi un dubbio o scegli una foto prima di continuare.");return}
@@ -466,7 +534,9 @@
     btn.innerHTML="<span class='loader'></span>Sto analizzando...";
     clearErr();
     try{
-      const payload=JSON.stringify({testo,immagineBase64:b64,mimeType:mime});
+      const tipo = modalita;
+      const source = {testo, immagineBase64: b64, mimeType: mime};
+      const payload = JSON.stringify(source);
       let r=await fetch(URL,{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
       let d=await r.json().catch(()=>null);
       if(r.status===503){
@@ -493,7 +563,8 @@
         showErr("Analisi non disponibile. Riprova tra qualche minuto.");
         return;
       }
-      cur={id:String(Date.now()),tipo:modalita,fatto:false,...d};
+      cur = {...d, id: String(Date.now()), tipo, fatto: false};
+      followSource = tipo === "documento" ? {...source, id: cur.id} : null;
       renderRes(cur);
     }catch{
       showErr("Impossibile raggiungere il servizio di analisi. Controlla la connessione e riprova.");
@@ -505,6 +576,9 @@
 
   function renderRes(d){
     openView("v-res");
+    followForm.classList.toggle("hidden", followSource?.id !== d.id);
+    followQuestion.value = "";
+    followAnswer.textContent = "";
     const urg=(d.urgenza||"Nessuna").toLowerCase();
     const urgCls=urg==="alta"?"alta":(urg==="media"?"media":"");
     document.getElementById("rBadges").innerHTML=
