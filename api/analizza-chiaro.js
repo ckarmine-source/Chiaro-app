@@ -64,6 +64,14 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
  "nota_salute": "solo per referti e farmaci, altrimenti stringa vuota",
  "dati_mancanti": ["parti illeggibili o informazioni che servirebbero"],
  "azione_pronta": {"titolo_azione":"titolo breve","testo_copiabile":"lettera, email o reclamo pronto con segnaposto [NOME], indicando all'inizio a chi inviarlo e come (PEC, raccomandata, modulo online)"},
+ "contatti": {"telefono":"numero da chiamare scritto nel documento","email":"","pec":"","orari":"orari del servizio clienti"},
+ "telefonata_utile": true se ha senso telefonare per contestare, chiedere una rettifica, una rateizzazione o chiarimenti,
+ "modulo": null oppure, SOLO se il documento è un modulo da compilare, {
+   "nome":"nome del modulo",
+   "campi":[{"etichetta":"nome del campo come è scritto sul modulo","spiegazione":"cosa chiede, in parole semplici","cosa_scrivere":"cosa scrivere o un esempio","dove_trovarlo":"dove trovare il dato (carta d'identità, tessera sanitaria, busta paga...)","tipo":"testo|data|codice_fiscale|iban|email|telefono|numero|scelta|firma","obbligatorio":true/false}],
+   "allegati":["documenti da allegare"],
+   "come_consegnarlo":"dove e come consegnarlo, entro quando"
+ },
  "bolletta": null oppure, SOLO per bollette di luce o gas, {
    "servizio":"luce|gas","fornitore":"nome","offerta":"nome dell'offerta",
    "periodo_da":"AAAA-MM-GG","periodo_a":"AAAA-MM-GG",
@@ -82,7 +90,7 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
    "soluzioni":["consigli concreti per spendere meno basati su QUESTI numeri: offerta e prezzo, potenza impegnata, fasce orarie, scadenza del prezzo bloccato, bonus sociale, consumi anomali, rateizzazione"]
  }
 }
-Se non serve scrivere a nessuno imposta "azione_pronta": null. Se non è una bolletta di luce o gas imposta "bolletta": null. Liste vuote se non pertinenti. Nei numeri usa il punto decimale.`;
+Se non serve scrivere a nessuno imposta "azione_pronta": null. Se non è una bolletta di luce o gas imposta "bolletta": null. Se non è un modulo da compilare imposta "modulo": null; se lo è, elenca TUTTI i campi da compilare nell'ordine del modulo. Liste vuote se non pertinenti. Nei numeri usa il punto decimale.`;
 
 /* ---------- normalizzazione della risposta del modello ---------- */
 const s = (v, max = 2000) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -124,6 +132,9 @@ export function normalizza(j) {
       : null,
   };
   out.bolletta = normalizzaBolletta(j?.bolletta);
+  out.modulo = normalizzaModulo(j?.modulo);
+  out.contatti = { telefono: s(j?.contatti?.telefono, 60), email: s(j?.contatti?.email, 120), pec: s(j?.contatti?.pec, 120), orari: s(j?.contatti?.orari, 200) };
+  out.telefonata_utile = !!j?.telefonata_utile;
   // compatibilità con le versioni precedenti dell'app (archivio e scadenze)
   const prima = out.scadenze.find((x) => x.data) || out.scadenze[0];
   out.scadenza_testo = prima ? `${prima.cosa}${prima.data ? " entro il " + prima.data.split("-").reverse().join("/") : prima.giorni_da_ricezione ? ` entro ${prima.giorni_da_ricezione} giorni dalla ricezione` : ""}` : "Nessuna scadenza fissa";
@@ -155,6 +166,64 @@ export function normalizzaBolletta(b) {
     })).filter((p) => p.consumo_periodo && p.totale),
     soluzioni: arr(b.soluzioni).map((x) => s(x, 400)).filter(Boolean).slice(0, 6),
   };
+}
+
+const TIPI_CAMPO = ["testo", "data", "codice_fiscale", "iban", "email", "telefono", "numero", "scelta", "firma"];
+export function normalizzaModulo(m) {
+  if (!m || typeof m !== "object") return null;
+  const campi = arr(m.campi).filter((c) => c && s(c.etichetta)).slice(0, 60).map((c) => ({
+    etichetta: s(c.etichetta, 200), spiegazione: s(c.spiegazione, 400), cosa_scrivere: s(c.cosa_scrivere, 300),
+    dove_trovarlo: s(c.dove_trovarlo, 200), tipo: scegli(c.tipo, TIPI_CAMPO, "testo"), obbligatorio: c.obbligatorio !== false,
+  }));
+  if (!campi.length) return null;
+  return { nome: s(m.nome, 200), campi, allegati: arr(m.allegati).map((x) => s(x, 300)).filter(Boolean).slice(0, 12), come_consegnarlo: s(m.come_consegnarlo, 600) };
+}
+
+/* ---------- "Preparami alla telefonata" ---------- */
+const istruzioniTelefonata = (lingua) => `Sei il motore di "Chiaro". Prepari una persona comune a una telefonata con un'azienda o un ufficio italiano per contestare, chiedere una rettifica, una rateizzazione o chiarimenti su un documento.
+Scrivi in ${lingua}, frasi brevi e pratiche. Le frasi da DIRE al telefono ("apertura", "tu_rispondi") scrivile in italiano, perché l'operatore parla italiano.
+Usa solo i dati della scheda; non inventare numeri di telefono, importi o norme. Se il numero non è nella scheda, indica dove trovarlo.
+${REGOLE}
+Restituisci ESCLUSIVAMENTE un JSON valido:
+{"obiettivo":"cosa ottenere con la telefonata, in una frase",
+ "chi_chiamare":"servizio da chiamare","numero":"numero se presente nella scheda, altrimenti stringa vuota","quando":"orari o momento migliore",
+ "prepara":["dati e documenti da avere davanti: codice cliente, numero fattura, POD, ecc."],
+ "apertura":"frase esatta per iniziare la chiamata",
+ "punti":["cose da dire, in ordine"],
+ "se_dicono":[{"operatore":"risposta tipica dell'operatore","tu_rispondi":"cosa rispondere"}],
+ "chiedi_sempre":["numero di pratica o reclamo","nome dell'operatore", "conferma scritta via email"],
+ "se_non_risolvi":["passi successivi: reclamo scritto, PEC, conciliazione, associazione consumatori"]}`;
+export function normalizzaTelefonata(j) {
+  const lista = (v, n = 8) => arr(v).map((x) => s(x, 400)).filter(Boolean).slice(0, n);
+  return {
+    obiettivo: s(j?.obiettivo, 300), chi_chiamare: s(j?.chi_chiamare, 200), numero: s(j?.numero, 60).replace(/[^\d+ ./-]/g, ""), quando: s(j?.quando, 200),
+    prepara: lista(j?.prepara), apertura: s(j?.apertura, 600), punti: lista(j?.punti),
+    se_dicono: arr(j?.se_dicono).filter((x) => x && s(x.operatore) && s(x.tu_rispondi)).slice(0, 6).map((x) => ({ operatore: s(x.operatore, 300), tu_rispondi: s(x.tu_rispondi, 500) })),
+    chiedi_sempre: lista(j?.chiedi_sempre, 6), se_non_risolvi: lista(j?.se_non_risolvi, 6),
+  };
+}
+
+async function chiamaGemini({ apiKey, modello, sistema, parts, maxTokens }) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modello)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sistema }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: { response_mime_type: "application/json", temperature: 0.2, maxOutputTokens: maxTokens, thinkingConfig: { thinkingLevel: "LOW" } },
+      }),
+    }
+  );
+  const raw = await response.text();
+  let data;
+  try { data = JSON.parse(raw); } catch { return { status: 502, error: "Risposta non valida dal servizio di analisi" }; }
+  if (!response.ok) return { status: [429, 503].includes(response.status) ? response.status : 502, error: data?.error?.message || "HTTP " + response.status };
+  const cand = data?.candidates?.[0];
+  if (cand?.finishReason === "MAX_TOKENS") return { status: 502, error: "Documento troppo lungo: prova con meno pagine." };
+  const text = (cand?.content?.parts || []).map((p) => p.text || "").join("");
+  try { return { json: JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")) }; } catch { return { status: 502, error: "JSON non valido dal modello" }; }
 }
 
 /* ---------- protezioni ---------- */
@@ -208,12 +277,24 @@ export default async function handler(req, res) {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     const testo = s(body.testo, MAX_TESTO);
     const lingua = s(body.lingua, 40) || "italiano semplice";
-    const immagini = leggiImmagini(body);
-    if (!testo && !immagini.length) return res.status(400).json({ error: "Scrivi un dubbio o aggiungi una foto." });
-
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY mancante" });
     const modello = process.env.GEMINI_MODEL || MODELLO_DEFAULT;
+
+    if (body.azione === "telefonata") {
+      // usa solo la scheda già prodotta: le foto non vengono rimandate
+      const scheda = body.scheda && typeof body.scheda === "object" ? JSON.stringify(body.scheda).slice(0, 20000) : "";
+      if (!scheda) return res.status(400).json({ error: "Manca la scheda del documento." });
+      const r = await chiamaGemini({ apiKey, modello, sistema: istruzioniTelefonata(lingua), maxTokens: 4096,
+        parts: [{ text: "Scheda del documento (JSON):\n" + scheda + (testo ? "\n\nCosa vuole ottenere la persona:\n" + testo : "") }] });
+      if (r.error) return res.status(r.status).json({ error: r.error });
+      const out = normalizzaTelefonata(r.json);
+      if (!out.apertura && !out.punti.length) return res.status(502).json({ error: "Copione vuoto" });
+      return res.status(200).json(out);
+    }
+
+    const immagini = leggiImmagini(body);
+    if (!testo && !immagini.length) return res.status(400).json({ error: "Scrivi un dubbio o aggiungi una foto." });
 
     const parts = [...immagini, {
       text: immagini.length
@@ -221,37 +302,9 @@ export default async function handler(req, res) {
         : "Dubbio o testo della persona:\n" + testo,
     }];
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modello)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: istruzioni(lingua, new Date().toISOString().slice(0, 10)) }] },
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            response_mime_type: "application/json",
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            thinkingConfig: { thinkingLevel: "LOW" },
-          },
-        }),
-      }
-    );
-
-    const raw = await response.text();
-    let data;
-    try { data = JSON.parse(raw); } catch { return res.status(502).json({ error: "Risposta non valida dal servizio di analisi" }); }
-    if (!response.ok) {
-      const msg = data?.error?.message || "HTTP " + response.status;
-      const status = [429, 503].includes(response.status) ? response.status : 502;
-      return res.status(status).json({ error: msg });
-    }
-    const cand = data?.candidates?.[0];
-    if (cand?.finishReason === "MAX_TOKENS") return res.status(502).json({ error: "Documento troppo lungo: prova con meno pagine." });
-    const text = (cand?.content?.parts || []).map((p) => p.text || "").join("");
-    let parsed;
-    try { parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "")); } catch { return res.status(502).json({ error: "JSON non valido dal modello" }); }
+    const r = await chiamaGemini({ apiKey, modello, sistema: istruzioni(lingua, new Date().toISOString().slice(0, 10)), parts, maxTokens: 8192 });
+    if (r.error) return res.status(r.status).json({ error: r.error });
+    const parsed = r.json;
     const out = normalizza(parsed);
     if (!out.in_parole_semplici) return res.status(502).json({ error: "Spiegazione vuota" });
     return res.status(200).json(out);

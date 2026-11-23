@@ -103,6 +103,23 @@
     .loader { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 380px) { .grid2 { grid-template-columns: 1fr; } }
+    .actions-bar { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 4px 0 14px; }
+    .act { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; background: #fff; border: 1.5px solid #bfdbfe; color: var(--primary-dark); border-radius: 14px; padding: 12px 14px; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+    .act .ico { font-size: 22px; }
+    .act small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .act[aria-expanded="true"] { background: var(--soft-blue); }
+    .campo { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+    .campo .n { font-size: 12px; font-weight: 800; color: var(--muted); }
+    .campo .et { font-weight: 700; font-size: 16px; margin: 2px 0 4px; }
+    .campo .info { font-size: 14px; color: #334155; margin-top: 4px; line-height: 1.45; }
+    .campo input[type=text], .campo input[type=date] { width: 100%; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 11px 12px; font-size: 16px; font-family: inherit; margin-top: 8px; background: #fff; color: var(--text); }
+    .check-ok { color: var(--green); font-size: 13px; font-weight: 700; margin-top: 4px; }
+    .check-ko { color: #b91c1c; font-size: 13px; font-weight: 700; margin-top: 4px; }
+    .progress { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
+    .progress i { display: block; height: 100%; background: var(--primary); }
+    .say { background: var(--soft-blue); border-left: 4px solid var(--primary); padding: 10px 12px; border-radius: 10px; font-size: 15px; line-height: 1.45; margin-top: 6px; }
+    .pair { border-top: 1px solid var(--border); padding: 8px 0; font-size: 14px; }
+    .tel-link { display: inline-block; margin-top: 6px; background: var(--primary); color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 700; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -194,6 +211,16 @@
     </div>
   </div>
 
+  <div id="v-compila" class="wrap hidden">
+    <button class="back" data-torna-scheda>← Torna alla scheda</button>
+    <div id="compilaBody"></div>
+  </div>
+
+  <div id="v-tel" class="wrap hidden">
+    <button class="back" data-torna-scheda>← Torna alla scheda</button>
+    <div id="telBody"></div>
+  </div>
+
   <div id="v-scad" class="wrap hidden">
     <h2 style="margin:4px 0 4px;font-size:22px">Scadenze</h2>
     <p style="margin:0 0 14px;font-size:13px;color:#64748b">Solo documenti con una data o un termine preciso.</p>
@@ -241,7 +268,7 @@
   const showErr = (m) => { const el = $("errBox"); el.textContent = m; el.classList.remove("hidden"); window.scrollTo(0, 0); };
   const clearErr = () => $("errBox").classList.add("hidden");
   const toast = (m) => { const t = $("toast"); t.textContent = m; t.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add("hidden"), 2500); };
-  const views = ["v-home", "v-input", "v-res", "v-scad", "v-spetta", "v-arc"];
+  const views = ["v-home", "v-input", "v-res", "v-compila", "v-tel", "v-scad", "v-spetta", "v-arc"];
   const openView = (id) => { clearErr(); views.forEach(v => $(v).classList.toggle("hidden", v !== id)); window.scrollTo(0, 0); };
   const setTab = (btnId) => ["nHome", "nScad", "nSpetta", "nArc"].forEach(b => $(b).classList.toggle("on", b === btnId));
   const salvaItems = () => { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) { showErr("Memoria del telefono piena: elimina qualche voce dall'archivio."); } };
@@ -434,6 +461,156 @@
     } finally { btn.disabled = false; btn.textContent = "Spiegamelo in parole semplici"; }
   };
 
+  /* ---------- azioni: calendario ---------- */
+  const salvaSeInArchivio = (d) => { if (items.some(x => x.id === d.id)) salvaItems(); };
+  const scadenzeDatate = (d) => (Array.isArray(d.scadenze) ? d.scadenze : []).map(s => ({ cosa: s.cosa, data: dataScadenza(s, d.ricezione) })).filter(x => x.data && giorniA(x.data) >= 0);
+  function testoIcs(d, x) {
+    const e = (t) => String(t || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+    const d0 = x.data.replace(/-/g, ""), d1 = addGiorni(x.data, 1).replace(/-/g, "");
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const dett = (d.titolo || "") + (d.mittente ? " – " + d.mittente : "") + "\n" + (d.in_parole_semplici || "") + "\nCreato con Chiaro.";
+    const allarme = (t) => ["BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e("Scadenza: " + x.cosa), "TRIGGER:" + t, "END:VALARM"];
+    return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Chiaro//IT", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+      "UID:" + d.id + "-" + d0 + "-" + Math.random().toString(36).slice(2, 8) + "@chiaro", "DTSTAMP:" + stamp,
+      "DTSTART;VALUE=DATE:" + d0, "DTEND;VALUE=DATE:" + d1, "SUMMARY:" + e(x.cosa + " – " + (d.titolo || "Chiaro")), "DESCRIPTION:" + e(dett),
+      ...allarme("-P1DT15H"), ...allarme("-PT15H"), "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  }
+  async function scaricaIcs(d, x) {
+    const nome = nomeFilePulito(x.cosa).replace(/\.txt$/, ".ics");
+    const file = new File([testoIcs(d, x)], nome, { type: "text/calendar" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: x.cosa }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+    const u = window.URL.createObjectURL(file); const a = h("a", { href: u, download: nome });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => window.URL.revokeObjectURL(u), 1000);
+    toast("Apri il file scaricato per aggiungerlo al calendario");
+  }
+  const linkGoogleCalendar = (d, x) => "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(x.cosa + " – " + (d.titolo || "Chiaro")) +
+    "&dates=" + x.data.replace(/-/g, "") + "/" + addGiorni(x.data, 1).replace(/-/g, "") + "&details=" + encodeURIComponent((d.in_parole_semplici || "") + "\nCreato con Chiaro.");
+
+  /* ---------- azioni: aiutami a compilare ---------- */
+  function validaCodiceFiscale(v) {
+    const cf = v.toUpperCase().replace(/\s/g, "");
+    if (!/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(cf)) return false;
+    const dispari = [1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23];
+    let somma = 0;
+    for (let i = 0; i < 15; i++) {
+      const c = cf[i], n = /\d/.test(c) ? Number(c) : c.charCodeAt(0) - 65;
+      somma += i % 2 === 0 ? dispari[n] : n;
+    }
+    return String.fromCharCode(65 + (somma % 26)) === cf[15];
+  }
+  function validaIban(v) {
+    const s = v.toUpperCase().replace(/\s/g, "");
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s) || (s.startsWith("IT") && s.length !== 27)) return false;
+    const r = (s.slice(4) + s.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+    let resto = 0; for (const ch of r) resto = (resto * 10 + Number(ch)) % 97;
+    return resto === 1;
+  }
+  function valida(tipo, v) {
+    v = String(v || "").trim(); if (!v) return null;
+    if (tipo === "codice_fiscale") return validaCodiceFiscale(v) ? "Codice fiscale valido" : "Il codice fiscale non torna: controlla lettere e numeri";
+    if (tipo === "iban") return validaIban(v) ? "IBAN valido" : "L’IBAN non torna: controlla le cifre (in Italia sono 27 caratteri)";
+    if (tipo === "email") return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v) ? "Email valida" : "Controlla l’indirizzo email";
+    if (tipo === "telefono") return /^\+?[\d\s./-]{6,}$/.test(v) ? "" : "Controlla il numero di telefono";
+    return "";
+  }
+  const isOk = (msg) => msg === "" || /valid[oa]$/.test(msg || "");
+  function progressoModulo(d) {
+    const campi = (d.modulo && d.modulo.campi) || [], comp = d.compilazione || {};
+    const obbl = campi.map((c, i) => ({ c, i })).filter(({ c }) => c.obbligatorio && c.tipo !== "firma");
+    return { totale: obbl.length, fatti: obbl.filter(({ c, i }) => String(comp[i] || "").trim() && isOk(valida(c.tipo, comp[i]))).length }; // conta solo i campi compilati correttamente
+  }
+  function renderCompila(d) {
+    openView("v-compila");
+    const v = $("compilaBody"); v.replaceChildren();
+    const m = d.modulo; d.compilazione = d.compilazione || {}; d.allegatiOk = d.allegatiOk || {};
+    const barra = h("i", { style: "width:0%" }), conta = h("div", { class: "note", style: "margin:0" });
+    const aggiorna = () => { const p = progressoModulo(d); barra.style.width = (p.totale ? Math.round(p.fatti / p.totale * 100) : 100) + "%"; conta.textContent = p.fatti + " di " + p.totale + " campi obbligatori compilati"; };
+    v.append(h("h2", { style: "margin:4px 0 2px;font-size:22px" }, "Aiutami a compilare"),
+      m.nome ? h("p", { style: "margin:0 0 6px;color:#64748b;font-size:14px" }, m.nome) : "",
+      h("div", { class: "progress" }, barra), conta,
+      h("p", { class: "note" }, "Scrivi qui le risposte e poi ricopiale sul modulo. Quello che scrivi resta solo su questo telefono" + (items.some(x => x.id === d.id) ? "." : ": salva la scheda in archivio per ritrovarlo.")));
+    m.campi.forEach((c, i) => {
+      const esito = h("div");
+      const mostraEsito = () => { const msg = valida(c.tipo, d.compilazione[i]); esito.className = msg == null || msg === "" ? "" : isOk(msg) ? "check-ok" : "check-ko"; esito.textContent = msg ? (isOk(msg) ? "✓ " : "⚠ ") + msg : ""; };
+      let input;
+      if (c.tipo === "firma") input = h("label", { class: "toggle", style: "margin-top:6px" }, h("input", { type: "checkbox", checked: !!d.compilazione[i], onchange: (e) => { d.compilazione[i] = e.target.checked ? "firmato" : ""; salvaSeInArchivio(d); } }), h("span", null, "Firmato a mano sul foglio"));
+      else input = h("input", { type: c.tipo === "data" ? "date" : "text", value: d.compilazione[i] || "", "aria-label": c.etichetta,
+        inputmode: c.tipo === "numero" || c.tipo === "telefono" ? "tel" : c.tipo === "email" ? "email" : null,
+        autocapitalize: c.tipo === "codice_fiscale" || c.tipo === "iban" ? "characters" : null,
+        oninput: (e) => { d.compilazione[i] = e.target.value; mostraEsito(); aggiorna(); salvaSeInArchivio(d); } });
+      v.append(h("div", { class: "campo" },
+        h("div", { class: "n" }, "CAMPO " + (i + 1) + (c.obbligatorio ? "" : " · facoltativo")),
+        h("div", { class: "et" }, c.etichetta),
+        c.spiegazione ? h("div", { class: "info" }, c.spiegazione) : "",
+        c.cosa_scrivere ? h("div", { class: "info" }, h("b", null, "Cosa scrivere: "), c.cosa_scrivere) : "",
+        c.dove_trovarlo ? h("div", { class: "info" }, h("b", null, "Dove lo trovi: "), c.dove_trovarlo) : "",
+        input, esito));
+      mostraEsito();
+    });
+    if (m.allegati.length) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Da allegare"),
+      ...m.allegati.map((a, i) => h("label", { class: "toggle" }, h("input", { type: "checkbox", checked: !!d.allegatiOk[i], onchange: (e) => { d.allegatiOk[i] = e.target.checked; salvaSeInArchivio(d); } }), h("span", null, a)))));
+    if (m.come_consegnarlo) v.append(h("div", { class: "box blue" }, h("div", { class: "lbl" }, "Come consegnarlo"), h("div", { style: "margin-top:4px;line-height:1.5" }, m.come_consegnarlo)));
+    v.append(h("button", { class: "btn", onclick: async () => {
+      const righe = [(m.nome || d.titolo || "Modulo").toUpperCase(), ""].concat(m.campi.map((c, i) => c.etichetta + ": " + (String(d.compilazione[i] || "").trim() || "—")));
+      try { await navigator.clipboard.writeText(righe.join("\n")); toast("Riepilogo copiato"); } catch (e) { toast("Copia non riuscita"); }
+    } }, "📋 Copia il riepilogo delle risposte"));
+    aggiorna();
+  }
+
+  /* ---------- azioni: preparami alla telefonata ---------- */
+  const schedaPerServer = (d) => { const { compilazione, allegatiOk, telefonate, copione, ...resto } = d; return resto; }; // i dati personali scritti nel modulo non partono mai
+  function renderTel(d) {
+    openView("v-tel");
+    const v = $("telBody"); v.replaceChildren();
+    v.append(h("h2", { style: "margin:4px 0 2px;font-size:22px" }, "Preparami alla telefonata"), h("p", { style: "margin:0 0 12px;color:#64748b;font-size:14px" }, d.titolo || ""));
+    if (!d.copione) {
+      const obiettivo = h("textarea", { placeholder: "Facoltativo: cosa vuoi ottenere? Es. Chiedere il ricalcolo della bolletta, pagare a rate…", style: "min-height:80px" });
+      const btn = h("button", { class: "btn" }, "Prepara la telefonata");
+      btn.onclick = async () => {
+        btn.disabled = true; btn.innerHTML = "<span class='loader'></span>Preparo il copione...";
+        try {
+          const r = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ azione: "telefonata", scheda: schedaPerServer(d), testo: obiettivo.value.trim(), lingua: d.lingua || "italiano semplice" }) });
+          const j = await r.json().catch(() => null);
+          if (r.status === 429) { showErr("Troppe richieste al momento. Riprova tra qualche minuto."); return; }
+          if (!r.ok || !j || j.error) { showErr("Non sono riuscito a preparare la telefonata. Riprova tra poco."); return; }
+          d.copione = j; salvaSeInArchivio(d); renderTel(d);
+        } catch (e) { showErr("Impossibile raggiungere il servizio. Controlla la connessione."); }
+        finally { btn.disabled = false; btn.textContent = "Prepara la telefonata"; }
+      };
+      v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Obiettivo"), obiettivo, btn));
+      return;
+    }
+    const c = d.copione;
+    const lista = (arr, cls) => h("ul", { class: "list" }, arr.map(x => h("li", null, x)));
+    if (c.obiettivo) v.append(h("div", { class: "box blue" }, h("div", { class: "lbl" }, "Obiettivo"), h("div", { style: "margin-top:4px;font-weight:600" }, c.obiettivo)));
+    v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Chi chiamare"),
+      h("div", { style: "margin-top:4px" }, c.chi_chiamare || (d.mittente || "")),
+      c.numero ? h("a", { class: "tel-link", href: "tel:" + c.numero.replace(/[^\d+]/g, "") }, "📞 Chiama " + c.numero) : h("div", { class: "note" }, "Il numero non è nel documento: lo trovi sul sito o sull’app del fornitore."),
+      c.quando ? h("div", { class: "note" }, "Quando: " + c.quando) : ""));
+    if (c.prepara.length) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Tieni a portata di mano"), ...c.prepara.map(x => h("label", { class: "toggle" }, h("input", { type: "checkbox" }), h("span", null, x)))));
+    if (c.apertura) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Per iniziare, di’"), h("div", { class: "say", dir: "ltr" }, c.apertura)));
+    if (c.punti.length) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Cosa dire, in ordine"), h("ol", { class: "list" }, c.punti.map(x => h("li", null, x)))));
+    if (c.se_dicono.length) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Se l’operatore ti dice…"),
+      ...c.se_dicono.map(p => h("div", { class: "pair" }, h("div", { style: "color:#64748b" }, "«" + p.operatore + "»"), h("div", { class: "say", dir: "ltr" }, p.tu_rispondi)))));
+    if (c.chiedi_sempre.length) v.append(h("div", { class: "box amber" }, h("div", { class: "lbl", style: "color:#b45309" }, "Prima di chiudere, chiedi sempre"), lista(c.chiedi_sempre)));
+    // note della chiamata
+    const campo = (ph, val) => h("input", { type: "text", placeholder: ph, value: val || "", style: "width:100%;border:1.5px solid #cbd5e1;border-radius:12px;padding:10px 12px;font-size:16px;margin-top:8px;font-family:inherit" });
+    const op = campo("Nome dell’operatore"), prat = campo("Numero di pratica o reclamo"), esito = h("textarea", { placeholder: "Cosa ti hanno detto, cosa hanno promesso…", style: "min-height:70px" });
+    d.telefonate = d.telefonate || [];
+    v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Note della chiamata"), op, prat, esito,
+      h("button", { class: "btn btn-sec", onclick: () => {
+        if (!op.value.trim() && !prat.value.trim() && !esito.value.trim()) { toast("Scrivi almeno una nota"); return; }
+        d.telefonate.unshift({ quando: new Date().toISOString(), operatore: op.value.trim(), pratica: prat.value.trim(), esito: esito.value.trim() });
+        if (!items.some(x => x.id === d.id)) items.unshift(d);
+        salvaItems(); toast("Note salvate nell’archivio"); renderTel(d);
+      } }, "💾 Salva le note"),
+      ...d.telefonate.map(t => h("div", { class: "pair" }, h("b", null, new Date(t.quando).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })),
+        t.operatore ? h("div", null, "Operatore: " + t.operatore) : "", t.pratica ? h("div", null, "Pratica: " + t.pratica) : "", t.esito ? h("div", { style: "color:#334155" }, t.esito) : ""))));
+    if (c.se_non_risolvi.length) v.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Se non si risolve"), lista(c.se_non_risolvi)));
+    v.append(h("button", { class: "btn-link", onclick: () => { if (confirm("Preparare un nuovo copione? Le note salvate restano.")) { delete d.copione; salvaSeInArchivio(d); renderTel(d); } } }, "Rifai il copione"));
+  }
+  document.querySelectorAll("[data-torna-scheda]").forEach(b => b.onclick = () => { if (cur) renderRes(cur); else tornaHome(); });
+
   /* ---------- scheda risultato ---------- */
   function renderRes(d) {
     openView("v-res");
@@ -450,6 +627,28 @@
       d.mittente ? h("p", { style: "margin:0 0 12px;color:#64748b;font-size:14px" }, d.mittente) : ""
     );
     if (d.nota_salute) body.append(h("div", { class: "box blue", style: "font-weight:700" }, "🩺 " + d.nota_salute));
+
+    // azioni: compaiono solo quando servono
+    const azioni = [], datate = scadenzeDatate(d);
+    if (d.modulo && d.modulo.campi && d.modulo.campi.length) {
+      const pr = progressoModulo(d);
+      azioni.push(h("button", { class: "act", onclick: () => { cur = d; renderCompila(d); } }, h("span", { class: "ico" }, "✍️"),
+        h("span", null, "Aiutami a compilare", h("small", null, pr.fatti ? pr.fatti + " di " + pr.totale + " campi obbligatori compilati" : d.modulo.campi.length + " campi spiegati uno per uno"))));
+    }
+    if (d.telefonata_utile) azioni.push(h("button", { class: "act", onclick: () => { cur = d; renderTel(d); } }, h("span", { class: "ico" }, "📞"),
+      h("span", null, "Preparami alla telefonata", h("small", null, d.copione ? "Copione pronto" + (d.telefonate && d.telefonate.length ? " · " + d.telefonate.length + " chiamate annotate" : "") : "Cosa dire, cosa chiedere, cosa rispondere"))));
+    let calBox = null;
+    if (datate.length) {
+      calBox = h("div", { class: "box hidden", id: "calBox" }, h("div", { class: "lbl" }, "Aggiungi al calendario"),
+        ...datate.map(x => h("div", { class: "deadline" }, h("b", null, x.cosa), h("div", { class: "when" }, dataIt(x.data)),
+          h("div", { class: "btn-row" },
+            h("button", { class: "btn btn-sec", onclick: () => scaricaIcs(d, x) }, "📱 Calendario del telefono"),
+            h("a", { class: "btn btn-sec", style: "text-align:center;text-decoration:none;display:block;margin-top:8px", href: linkGoogleCalendar(d, x), target: "_blank", rel: "noopener" }, "Google Calendar")))),
+        h("p", { class: "note" }, "Con il promemoria due giorni prima e il giorno prima, alle 9."));
+      azioni.push(h("button", { class: "act", "aria-expanded": "false", onclick: (e) => { const open = calBox.classList.toggle("hidden") === false; e.currentTarget.setAttribute("aria-expanded", String(open)); } }, h("span", { class: "ico" }, "🗓️"),
+        h("span", null, "Segna sul calendario", h("small", null, datate.length === 1 ? "Scadenza del " + dataIt(datate[0].data) : datate.length + " scadenze"))));
+    }
+    if (azioni.length) body.append(h("div", { class: "lbl", style: "margin:4px 2px 6px" }, "Cosa posso fare"), h("div", { class: "actions-bar" }, azioni), calBox || "");
 
     // scadenze
     const sc = Array.isArray(d.scadenze) ? d.scadenze : [];
@@ -656,7 +855,7 @@
   $("nArc").onclick = () => { setTab("nArc"); openView("v-arc"); renderArcList(); };
 
   renderHome();
-  window.__chiaro = { calcolaSpetta, scadenzeDi, formattaDocumentoTesto, analisiBolletta };
+  window.__chiaro = { calcolaSpetta, scadenzeDi, formattaDocumentoTesto, analisiBolletta, validaCodiceFiscale, validaIban, testoIcs };
 })();
 </script>
 <script>
