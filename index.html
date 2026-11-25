@@ -344,6 +344,22 @@
     return out;
   }
 
+  /* ---------- F24: controlli fatti dall'app ---------- */
+  function rataTesto(r) {
+    const m = /^(\d{2})(\d{2})$/.exec(r || ""); if (!m) return "";
+    const n = +m[1], tot = +m[2];
+    return n >= 1 && tot >= n ? (tot === 1 ? "unica soluzione" : "rata " + n + " di " + tot) : "";
+  }
+  function analisiF24(d) {
+    const f = d && d.f24; if (!f || !f.righe || !f.righe.length) return null;
+    const deb = f.righe.reduce((s, r) => s + (r.debito || 0), 0), cred = f.righe.reduce((s, r) => s + (r.credito || 0), 0);
+    const calcolato = Math.round((deb - cred) * 100) / 100;
+    const sezioni = {};
+    f.righe.forEach(r => { const x = sezioni[r.sezione] = sezioni[r.sezione] || { deb: 0, cred: 0, n: 0 }; x.deb += r.debito || 0; x.cred += r.credito || 0; x.n++; });
+    const g = f.data_pagamento ? giorniA(f.data_pagamento) : null;
+    return { deb, cred, calcolato, quadra: f.saldo == null ? null : Math.abs(calcolato - f.saldo) < 0.02, sezioni, giorni: g, nonVerificati: f.righe.filter(r => !r.verificata).length };
+  }
+
   /* ---------- testo per condividere / scaricare ---------- */
   const formattaDocumentoTesto = (d) => {
     if (!d) return "";
@@ -672,6 +688,37 @@
       body.append(h("div", { class: "box" }, h("div", { class: "lbl" }, "Scadenza"), h("div", { style: "font-weight:600;margin-top:4px" }, d.scadenza_testo)));
     }
 
+    // F24 riga per riga
+    const af = analisiF24(d);
+    if (af) {
+      const f = d.f24;
+      const box = h("div", { class: "box" }, h("div", { class: "lbl" }, "Il tuo F24, riga per riga"),
+        f.contribuente ? h("div", { style: "font-size:14px;color:#64748b;margin-top:2px" }, "Contribuente: " + f.contribuente) : "");
+      f.righe.forEach(r => {
+        const meta = [r.anno ? "anno " + r.anno : "", rataTesto(r.rateazione), r.ente ? (r.sezione === "Regioni" ? "Regione " : r.sezione === "INPS" ? "sede " : "ente ") + r.ente : ""].filter(Boolean).join(" · ");
+        box.append(h("div", { class: "pair" },
+          h("div", { class: "row-between" },
+            h("div", null, h("div", { class: "lbl", style: "margin:0" }, r.sezione + " · " + r.codice), h("b", null, r.descrizione || "Codice non nell’elenco di Chiaro")),
+            h("div", { style: "text-align:right;white-space:nowrap" }, r.debito ? h("b", null, eur(r.debito)) : "", r.credito ? h("div", { style: "color:#047857;font-weight:700" }, "− " + eur(r.credito) + " credito") : "")),
+          r.spiegazione ? h("div", { style: "font-size:14px;color:#334155;margin-top:2px" }, r.spiegazione) : "",
+          meta ? h("div", { class: "cert" }, meta) : "",
+          r.verificata ? "" : h("div", { class: "check-ko", style: "font-weight:600" }, "⚠ Codice da verificare sul sito dell’Agenzia delle Entrate o con il CAF")));
+      });
+      const tot = h("div", { style: "margin-top:10px;font-size:15px" },
+        h("div", { class: "row-between" }, h("span", null, "Totale a debito"), h("b", null, eur(af.deb))),
+        af.cred ? h("div", { class: "row-between" }, h("span", null, "Crediti usati in compensazione"), h("b", { style: "color:#047857" }, "− " + eur(af.cred))) : "",
+        h("div", { class: "row-between", style: "border-top:1px solid #e2e8f0;padding-top:6px;margin-top:4px" }, h("span", null, "Da pagare"), h("b", null, eur(af.calcolato))));
+      box.append(tot);
+      if (af.quadra === true) box.append(h("div", { class: "check-ok" }, "✓ La somma delle righe torna con il saldo scritto sul modello"));
+      else if (af.quadra === false) box.append(h("div", { class: "check-ko" }, "⚠ La somma delle righe (" + eur(af.calcolato) + ") non torna con il saldo scritto (" + eur(f.saldo) + "): controlla gli importi o se manca qualche riga"));
+      if (af.cred && af.calcolato === 0) box.append(h("p", { class: "note" }, "Saldo zero grazie ai crediti: l’F24 va comunque presentato, online (home banking o servizi dell’Agenzia delle Entrate)."));
+      if (af.giorni != null) box.append(af.giorni >= 0
+        ? h("div", { class: "deadline" + (af.giorni <= 7 ? " soon" : ""), style: "margin-top:10px" }, h("b", null, "Da pagare entro"), h("div", { class: "when" }, "📅 " + dataIt(f.data_pagamento) + " · " + quando(af.giorni)))
+        : h("div", { class: "box amber", style: "margin-top:10px" }, h("b", null, "La scadenza è passata"), h("div", { style: "font-size:14px;margin-top:4px" }, "Puoi rimediare con il ravvedimento operoso: si paga una sanzione ridotta (più bassa quanto prima paghi) più gli interessi. Il CAF o il commercialista calcolano l’importo esatto; puoi farlo anche con il servizio dell’Agenzia delle Entrate.")));
+      box.append(h("p", { class: "note" }, "Le descrizioni dei codici vengono dalla tabella dei codici tributo di Chiaro, non sono inventate. Il calcolo dei totali lo fa l’app sui dati letti: confrontali con il foglio."));
+      body.append(box);
+    }
+
     // bolletta: la tua spesa e i confronti
     const ab = analisiBolletta(d, items, RIF);
     if (ab) {
@@ -855,7 +902,7 @@
   $("nArc").onclick = () => { setTab("nArc"); openView("v-arc"); renderArcList(); };
 
   renderHome();
-  window.__chiaro = { calcolaSpetta, scadenzeDi, formattaDocumentoTesto, analisiBolletta, validaCodiceFiscale, validaIban, testoIcs };
+  window.__chiaro = { analisiF24, rataTesto, calcolaSpetta, scadenzeDi, formattaDocumentoTesto, analisiBolletta, validaCodiceFiscale, validaIban, testoIcs };
 })();
 </script>
 <script>

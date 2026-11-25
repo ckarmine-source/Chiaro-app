@@ -1,4 +1,4 @@
-const CACHE_NAME = "chiaro-cache-v5";
+const CACHE_NAME = "chiaro-cache-v6";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

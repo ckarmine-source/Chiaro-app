@@ -12,6 +12,38 @@ const TIPI_IMMAGINE = ["image/jpeg", "image/png", "image/webp", "application/pdf
 const LIMITE_RICHIESTE = 20;                  // per indirizzo IP...
 const FINESTRA_MS = 10 * 60 * 1000;           // ...ogni 10 minuti
 
+/* Codici tributo F24 più comuni (fonte: tabelle dei codici tributo dell'Agenzia delle Entrate).
+   La descrizione mostrata all'utente viene da qui, non dal modello. Da ricontrollare periodicamente. */
+export const CODICI_F24 = {
+  // Erario
+  "4001": "IRPEF saldo", "4033": "IRPEF acconto prima rata", "4034": "IRPEF acconto seconda rata o in unica soluzione",
+  "1840": "Cedolare secca affitti: acconto prima rata", "1841": "Cedolare secca affitti: acconto seconda rata o in unica soluzione", "1842": "Cedolare secca affitti: saldo",
+  "1790": "Regime forfetario: acconto prima rata", "1791": "Regime forfetario: acconto seconda rata o in unica soluzione", "1792": "Regime forfetario: saldo",
+  "2001": "IRES acconto prima rata", "2002": "IRES acconto seconda rata o in unica soluzione", "2003": "IRES saldo",
+  "3800": "IRAP saldo", "3812": "IRAP acconto prima rata", "3813": "IRAP acconto seconda rata o in unica soluzione",
+  "1001": "Ritenute sugli stipendi dei dipendenti (versate dal datore di lavoro)", "1040": "Ritenute sui compensi di lavoro autonomo",
+  "6001": "IVA mensile di gennaio", "6002": "IVA mensile di febbraio", "6003": "IVA mensile di marzo", "6004": "IVA mensile di aprile",
+  "6005": "IVA mensile di maggio", "6006": "IVA mensile di giugno", "6007": "IVA mensile di luglio", "6008": "IVA mensile di agosto",
+  "6009": "IVA mensile di settembre", "6010": "IVA mensile di ottobre", "6011": "IVA mensile di novembre", "6012": "IVA mensile di dicembre",
+  "6031": "IVA trimestrale: primo trimestre", "6032": "IVA trimestrale: secondo trimestre", "6033": "IVA trimestrale: terzo trimestre", "6034": "IVA trimestrale: quarto trimestre",
+  "6099": "IVA: saldo annuale",
+  "1668": "Interessi per il pagamento a rate delle imposte della dichiarazione",
+  "1989": "Interessi del ravvedimento operoso su IRPEF", "8901": "Sanzione per ritardo o omissione IRPEF",
+  // Regioni
+  "3801": "Addizionale regionale IRPEF",
+  // IMU e altri tributi locali
+  "3843": "Addizionale comunale IRPEF: acconto", "3844": "Addizionale comunale IRPEF: saldo",
+  "3912": "IMU abitazione principale di lusso (categorie A/1, A/8, A/9) e pertinenze", "3913": "IMU fabbricati rurali strumentali",
+  "3914": "IMU terreni", "3916": "IMU aree fabbricabili", "3918": "IMU altri fabbricati (es. seconde case, immobili affittati)",
+  "3925": "IMU immobili di categoria D: quota dello Stato", "3930": "IMU immobili di categoria D: quota del Comune",
+  "3923": "Interessi da accertamento IMU", "3924": "Sanzioni da accertamento IMU",
+  "3944": "TARI (tassa rifiuti)", "3945": "Interessi TARI", "3946": "Sanzioni TARI",
+  // INPS (causali contributo)
+  "AF": "INPS artigiani: contributi fissi sul minimale", "CF": "INPS commercianti: contributi fissi sul minimale",
+  "AP": "INPS artigiani: contributi sul reddito oltre il minimale", "CP": "INPS commercianti: contributi sul reddito oltre il minimale",
+  "PXX": "INPS gestione separata: contributi dei professionisti senza cassa",
+};
+
 /* Conoscenza curata: regole italiane che fanno risparmiare. Da rivedere a ogni legge di bilancio. */
 const REGOLE = `
 MULTE (Codice della Strada):
@@ -29,6 +61,13 @@ FISCO:
 - Comunicazione di irregolarità ("avviso bonario") dell'Agenzia delle Entrate: pagando entro il termine indicato la sanzione è ridotta; si può rateizzare; se l'importo è sbagliato si chiede la correzione (autotutela), anche tramite CAF.
 - Cartelle di Agenzia Entrate-Riscossione: possibile rateizzazione. Prescrizione indicativa: bollo auto 3 anni, multe e tributi locali (IMU, TARI) 5 anni, imposte erariali 10 anni. Cartelle vecchie: far verificare la prescrizione.
 - Detrazioni 730 spesso dimenticate: sport figli 5-18 anni (19% fino a 210 €), abbonamento mezzi pubblici (19% fino a 250 €), veterinario, affitto per under 31 e studenti fuori sede.
+F24 (modello per pagare tasse e contributi):
+- Sezioni: Contribuente (dati di chi paga), Erario (imposte statali: IRPEF, IVA, cedolare secca...), INPS (contributi), Regioni (addizionale regionale), IMU e altri tributi locali (IMU, TARI, addizionale comunale), altri enti (INAIL...).
+- Ogni riga: codice tributo (o causale INPS), "rateazione/regione/prov./mese rif." (es. 0102 = rata 1 di 2; per le addizionali è il codice della Regione), "codice ente/comune" (codice catastale del Comune), anno di riferimento (l'anno a cui si riferisce l'imposta, non quello del pagamento), importi a debito (da pagare) e a credito (crediti usati in compensazione).
+- Saldo = totale debiti − totale crediti. Con saldo zero per compensazione l'F24 va comunque presentato, online.
+- Scadenze tipiche: il 16 del mese; saldo e primo acconto delle imposte della dichiarazione a fine giugno (o entro 30 giorni dopo con maggiorazione dello 0,40%); secondo acconto a fine novembre; IMU 16 giugno e 16 dicembre.
+- Pagato in ritardo: si può rimediare con il ravvedimento operoso, pagando una sanzione ridotta (più bassa quanto prima si paga) più gli interessi legali, con codici tributo appositi.
+- Codici tributo noti (usa SOLO questi significati; se un codice non è nell'elenco dillo, non inventare): ${Object.entries(CODICI_F24).map(([k, v]) => k + " = " + v).join("; ")}.
 LAVORO E PENSIONE:
 - Busta paga: controlla ore, straordinari, ferie e permessi residui, detrazioni, conguaglio fiscale. Errori: ufficio paghe, poi patronato o sindacato.
 - Cedolino pensione: addizionali regionali e comunali rateizzate nell'anno; conguaglio fiscale a febbraio-marzo. Quattordicesima a luglio per pensionati con almeno 64 anni e reddito basso.
@@ -66,6 +105,11 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
  "azione_pronta": {"titolo_azione":"titolo breve","testo_copiabile":"lettera, email o reclamo pronto con segnaposto [NOME], indicando all'inizio a chi inviarlo e come (PEC, raccomandata, modulo online)"},
  "contatti": {"telefono":"numero da chiamare scritto nel documento","email":"","pec":"","orari":"orari del servizio clienti"},
  "telefonata_utile": true se ha senso telefonare per contestare, chiedere una rettifica, una rateizzazione o chiarimenti,
+ "f24": null oppure, SOLO se il documento è un modello F24 o la domanda riguarda un F24, {
+   "contribuente":"nome di chi paga, se presente","data_pagamento":"AAAA-MM-GG o null (scadenza o data indicata)",
+   "righe":[{"sezione":"Erario|INPS|Regioni|IMU e altri tributi locali|Altri enti","codice":"codice tributo o causale come scritto","ente":"codice comune/regione/sede se presente","rateazione":"come scritta, es. 0102","anno":"anno di riferimento","debito":numero o null,"credito":numero o null,"spiegazione":"cosa paga questa riga, in parole semplici"}],
+   "saldo": numero o null (saldo finale scritto sul modello)
+ },
  "modulo": null oppure, SOLO se il documento è un modulo da compilare, {
    "nome":"nome del modulo",
    "campi":[{"etichetta":"nome del campo come è scritto sul modulo","spiegazione":"cosa chiede, in parole semplici","cosa_scrivere":"cosa scrivere o un esempio","dove_trovarlo":"dove trovare il dato (carta d'identità, tessera sanitaria, busta paga...)","tipo":"testo|data|codice_fiscale|iban|email|telefono|numero|scelta|firma","obbligatorio":true/false}],
@@ -90,14 +134,19 @@ Restituisci ESCLUSIVAMENTE un JSON valido con questi campi:
    "soluzioni":["consigli concreti per spendere meno basati su QUESTI numeri: offerta e prezzo, potenza impegnata, fasce orarie, scadenza del prezzo bloccato, bonus sociale, consumi anomali, rateizzazione"]
  }
 }
-Se non serve scrivere a nessuno imposta "azione_pronta": null. Se non è una bolletta di luce o gas imposta "bolletta": null. Se non è un modulo da compilare imposta "modulo": null; se lo è, elenca TUTTI i campi da compilare nell'ordine del modulo. Liste vuote se non pertinenti. Nei numeri usa il punto decimale.`;
+Se non serve scrivere a nessuno imposta "azione_pronta": null. Se non è una bolletta di luce o gas imposta "bolletta": null. Per un F24 non usare "modulo": compila "f24" con TUTTE le righe e metti la data di pagamento anche in "scadenze". Se non è un F24 imposta "f24": null. Se non è un modulo da compilare imposta "modulo": null; se lo è, elenca TUTTI i campi da compilare nell'ordine del modulo. Liste vuote se non pertinenti. Nei numeri usa il punto decimale.`;
 
 /* ---------- normalizzazione della risposta del modello ---------- */
 const s = (v, max = 2000) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const arr = (v) => (Array.isArray(v) ? v : []);
 const num = (v) => {
   if (typeof v === "number" && isFinite(v)) return v;
-  if (typeof v === "string" && v.trim()) { const n = Number(v.replace(/[€\s]/g, "").replace(",", ".")); return isFinite(n) ? n : null; }
+  if (typeof v === "string" && v.trim()) {
+    let t = v.replace(/[€\s]/g, "");
+    if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");          // 1.234,50 → 1234.50
+    else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, "");       // 1.234.567 → 1234567
+    const n = Number(t); return isFinite(n) ? n : null;
+  }
   return null;
 };
 const scegli = (v, ammessi, def) => (ammessi.includes(v) ? v : def);
@@ -133,6 +182,8 @@ export function normalizza(j) {
   };
   out.bolletta = normalizzaBolletta(j?.bolletta);
   out.modulo = normalizzaModulo(j?.modulo);
+  out.f24 = normalizzaF24(j?.f24);
+  if (out.f24) out.modulo = null;
   out.contatti = { telefono: s(j?.contatti?.telefono, 60), email: s(j?.contatti?.email, 120), pec: s(j?.contatti?.pec, 120), orari: s(j?.contatti?.orari, 200) };
   out.telefonata_utile = !!j?.telefonata_utile;
   // compatibilità con le versioni precedenti dell'app (archivio e scadenze)
@@ -166,6 +217,22 @@ export function normalizzaBolletta(b) {
     })).filter((p) => p.consumo_periodo && p.totale),
     soluzioni: arr(b.soluzioni).map((x) => s(x, 400)).filter(Boolean).slice(0, 6),
   };
+}
+
+const SEZIONI_F24 = ["Erario", "INPS", "Regioni", "IMU e altri tributi locali", "Altri enti"];
+export function normalizzaF24(f) {
+  if (!f || typeof f !== "object") return null;
+  const righe = arr(f.righe).slice(0, 40).map((r) => {
+    const codice = s(r?.codice, 12).toUpperCase().replace(/\s/g, "");
+    const ufficiale = CODICI_F24[codice] || null;
+    return {
+      sezione: scegli(r?.sezione, SEZIONI_F24, "Erario"), codice, ente: s(r?.ente, 12), rateazione: s(r?.rateazione, 8).replace(/\s/g, ""), anno: s(r?.anno, 6),
+      debito: pos(r?.debito), credito: pos(r?.credito),
+      descrizione: ufficiale, verificata: !!ufficiale, spiegazione: s(r?.spiegazione, 400),
+    };
+  }).filter((r) => r.codice && (r.debito || r.credito));
+  if (!righe.length) return null;
+  return { contribuente: s(f.contribuente, 120), data_pagamento: dataIso(f.data_pagamento), righe, saldo: num(f.saldo) };
 }
 
 const TIPI_CAMPO = ["testo", "data", "codice_fiscale", "iban", "email", "telefono", "numero", "scelta", "firma"];
